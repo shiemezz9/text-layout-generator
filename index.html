@@ -1,0 +1,1270 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>文字排版效果生成器</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --panel: #181818;
+      --panel-2: #222;
+      --text: #f4f1ea;
+      --muted: #aaa39a;
+      --line: #34302b;
+      --accent: #d7a84d;
+      --focus: #fff5d0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #111;
+      color: var(--text);
+      font-family: Inter, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, #171514, #111);
+      padding: 18px;
+      overflow: auto;
+    }
+
+    main {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      background: #0d0d0d;
+      min-width: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 18px;
+      background: rgba(18, 18, 18, 0.9);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 650;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .download-status {
+      min-width: 6em;
+      color: #d9c28d;
+      font-size: 12px;
+      text-align: right;
+    }
+
+    button {
+      height: 36px;
+      border: 1px solid #4a4134;
+      border-radius: 6px;
+      background: #211d18;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      padding: 0 12px;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      color: var(--focus);
+    }
+
+    .canvas-shell {
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      overflow: auto;
+    }
+
+    canvas {
+      width: min(100%, 1100px);
+      height: auto;
+      max-height: calc(100vh - 92px);
+      border: 1px solid #2e2b26;
+      background: #101010;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    }
+
+    .export-preview {
+      position: fixed;
+      inset: auto 18px 18px auto;
+      z-index: 20;
+      width: min(360px, calc(100vw - 36px));
+      border: 1px solid #4a4134;
+      border-radius: 8px;
+      background: #151311;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+      padding: 12px;
+    }
+
+    .export-preview[hidden] {
+      display: none;
+    }
+
+    .export-preview img {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      border: 1px solid #322c25;
+      background: #080808;
+    }
+
+    .export-preview-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      color: #f4dfb4;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .export-preview-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .export-preview-actions a {
+      display: inline-grid;
+      place-items: center;
+      height: 34px;
+      border: 1px solid #4a4134;
+      border-radius: 6px;
+      background: #211d18;
+      color: var(--text);
+      font-size: 13px;
+      padding: 0 11px;
+      text-decoration: none;
+    }
+
+    .export-preview-actions a:hover {
+      border-color: var(--accent);
+      color: var(--focus);
+    }
+
+    .section {
+      border-bottom: 1px solid var(--line);
+      padding: 16px 0;
+    }
+
+    .section:first-child {
+      padding-top: 0;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      color: #e7d8bd;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .control-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .value {
+      color: #e9d3a5;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid #37322d;
+      border-radius: 6px;
+      background: #111;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(215, 168, 77, 0.18);
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+      padding: 10px;
+      line-height: 1.55;
+    }
+
+    input[type="text"],
+    select {
+      height: 36px;
+      padding: 0 10px;
+    }
+
+    input[type="color"] {
+      height: 36px;
+      padding: 3px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent);
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: #0f0f0f;
+      border: 1px solid #37322d;
+      border-radius: 6px;
+      padding: 4px;
+    }
+
+    .segmented-three {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .segmented input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 34px;
+      color: var(--text);
+    }
+
+    .checkbox-row input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+    }
+
+    .segmented span {
+      display: grid;
+      place-items: center;
+      min-height: 30px;
+      border-radius: 4px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .segmented input:checked + span {
+      background: #3a2d1b;
+      color: #ffe5ad;
+    }
+
+    .file-input {
+      padding: 7px;
+      line-height: 1.2;
+    }
+
+    .hint {
+      color: #847d73;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 8px 0 0;
+    }
+
+    @media (max-width: 860px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        max-height: 52vh;
+      }
+
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <section class="section">
+        <p class="section-title">内容</p>
+        <label>
+          文字
+          <textarea id="textInput">黑い卵を割ってしまいました
+锅就是人生的缩影
+文字像雨一样落下
+漂浮 边界 深浅 方向</textarea>
+        </label>
+        <label>
+          效果模式
+          <select id="mode">
+            <option value="axis">1. 中轴线两端漂浮</option>
+            <option value="rain">2. 竖排雨落层次</option>
+            <option value="image">3. 图片轮廓框字</option>
+            <option value="imageFill">4. 图片填充字</option>
+          </select>
+        </label>
+        <label id="axisWrap">
+          中轴方向
+          <span class="segmented">
+            <label><input type="radio" name="axis" value="vertical" checked><span>竖轴</span></label>
+            <label><input type="radio" name="axis" value="horizontal"><span>横轴</span></label>
+          </span>
+        </label>
+        <label id="imageWrap">
+          上传图片
+          <input class="file-input" id="imageInput" type="file" accept="image/*" />
+        </label>
+        <label id="fillDirectionWrap">
+          填充方向
+          <span class="segmented">
+            <label><input type="radio" name="fillDirection" value="horizontal" checked><span>横排</span></label>
+            <label><input type="radio" name="fillDirection" value="vertical"><span>竖排</span></label>
+          </span>
+        </label>
+        <label id="imageAlignWrap">
+          换行对齐
+          <span class="segmented segmented-three">
+            <label><input type="radio" name="imageAlign" value="left" checked><span>居左</span></label>
+            <label><input type="radio" name="imageAlign" value="center"><span>居中</span></label>
+            <label><input type="radio" name="imageAlign" value="right"><span>居右</span></label>
+          </span>
+        </label>
+        <label class="checkbox-row" id="imageLineBreakWrap">
+          <input id="imageLineBreaks" type="checkbox" />
+          <span>应用输入文字换行</span>
+        </label>
+        <label class="checkbox-row" id="imageRepeatWrap">
+          <input id="imageRepeatFill" type="checkbox" checked />
+          <span>重复文字以填满图形</span>
+        </label>
+      </section>
+
+      <section class="section">
+        <p class="section-title">样式</p>
+        <div class="row">
+          <label>
+            背景颜色
+            <input id="bgColor" type="color" value="#11100f" />
+          </label>
+          <label>
+            字体颜色
+            <input id="fontColor" type="color" value="#f7efe1" />
+          </label>
+        </div>
+        <label class="checkbox-row">
+          <input id="transparentExport" type="checkbox" />
+          <span>下载时使用透明背景</span>
+        </label>
+        <label>
+          字体
+          <select id="fontFamily">
+            <option value="'Noto Serif SC', 'Songti SC', SimSun, serif">宋体 / 明朝</option>
+            <option value="'Noto Sans SC', 'Microsoft YaHei', sans-serif">黑体 / 雅黑</option>
+            <option value="'KaiTi', 'STKaiti', serif">楷体</option>
+            <option value="'Yu Mincho', 'Hiragino Mincho ProN', serif">日文明朝</option>
+            <option value="Impact, Haettenschweiler, sans-serif">厚重海报体</option>
+          </select>
+        </label>
+        <label>
+          自定义字体名
+          <input id="customFont" type="text" placeholder="例如：Source Han Serif SC" />
+        </label>
+      </section>
+
+      <section class="section">
+        <p class="section-title">排版滑杆</p>
+        <label id="countWrap">
+          <span class="control-head"><span>文字数量</span><span class="value" id="countValue"></span></span>
+          <input id="count" type="range" min="0" max="900" value="260" />
+        </label>
+        <label id="minSizeWrap">
+          <span class="control-head"><span>最小字号</span><span class="value" id="minSizeValue"></span></span>
+          <input id="minSize" type="range" min="8" max="90" value="18" />
+        </label>
+        <label id="maxSizeWrap">
+          <span class="control-head"><span>最大字号</span><span class="value" id="maxSizeValue"></span></span>
+          <input id="maxSize" type="range" min="12" max="180" value="76" />
+        </label>
+        <label id="rotationWrap">
+          <span class="control-head"><span>旋转幅度</span><span class="value" id="rotationValue"></span></span>
+          <input id="rotation" type="range" min="0" max="180" value="28" />
+        </label>
+        <label id="blurWrap">
+          <span class="control-head"><span>随机模糊</span><span class="value" id="blurValue"></span></span>
+          <input id="blur" type="range" min="0" max="18" value="3" />
+        </label>
+        <label id="spreadWrap">
+          <span class="control-head"><span>分散程度</span><span class="value" id="spreadValue"></span></span>
+          <input id="spread" type="range" min="0" max="100" value="55" />
+        </label>
+        <label id="axisScatterWrap">
+          <span class="control-head"><span>上下分散程度</span><span class="value" id="axisScatterValue"></span></span>
+          <input id="axisScatter" type="range" min="0" max="100" value="35" />
+        </label>
+        <label id="rainAxisWrap">
+          <span class="control-head"><span>雨落横轴中心</span><span class="value" id="rainAxisValue"></span></span>
+          <input id="rainAxis" type="range" min="10" max="90" value="50" />
+        </label>
+        <label id="imageThresholdWrap">
+          <span class="control-head"><span>图片阈值</span><span class="value" id="imageThresholdValue"></span></span>
+          <input id="imageThreshold" type="range" min="0" max="255" value="150" />
+        </label>
+        <label id="paddingWrap">
+          <span class="control-head"><span>边距 / 轮廓间距</span><span class="value" id="paddingValue"></span></span>
+          <input id="padding" type="range" min="10" max="180" value="58" />
+        </label>
+        <label id="seedWrap">
+          <span class="control-head"><span>随机种子</span><span class="value" id="seedValue"></span></span>
+          <input id="seed" type="range" min="1" max="9999" value="2026" />
+        </label>
+      </section>
+
+      <section class="section">
+        <p class="section-title">画布</p>
+        <div class="row">
+          <label>
+            宽度
+            <input id="canvasW" type="text" value="1200" />
+          </label>
+          <label>
+            高度
+            <input id="canvasH" type="text" value="900" />
+          </label>
+        </div>
+        <p class="hint">图片轮廓模式会读取图片明暗边缘，适合黑白剪影、透明 PNG 或对比强的形状。</p>
+      </section>
+    </aside>
+
+    <main>
+      <header>
+        <h1>文字排版效果生成器</h1>
+        <div class="header-actions">
+          <span class="download-status" id="downloadStatus" aria-live="polite"></span>
+          <button id="randomize">随机生成</button>
+          <button id="download">下载 PNG</button>
+        </div>
+      </header>
+      <div class="canvas-shell">
+        <canvas id="canvas" width="1200" height="900"></canvas>
+      </div>
+      <div class="export-preview" id="exportPreview" hidden>
+        <div class="export-preview-title">
+          <span>PNG 已生成</span>
+          <button id="closePreview">关闭</button>
+        </div>
+        <img id="exportImage" alt="生成的文字排版 PNG 预览" />
+        <div class="export-preview-actions">
+          <a id="openImage" href="#" target="_blank" rel="noopener">打开图片</a>
+          <a id="saveImage" href="#" download="text-layout.png">保存 PNG</a>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const controls = {};
+    const ids = [
+      "textInput", "mode", "bgColor", "fontColor", "fontFamily", "count",
+      "minSize", "maxSize", "rotation", "blur", "spread", "padding",
+      "seed", "canvasW", "canvasH", "imageInput", "customFont", "transparentExport", "axisScatter", "rainAxis", "imageThreshold",
+      "imageLineBreaks", "imageRepeatFill"
+    ];
+
+    ids.forEach((id) => {
+      controls[id] = document.getElementById(id);
+    });
+
+    const valueLabels = {
+      count: "",
+      minSize: "px",
+      maxSize: "px",
+      rotation: "deg",
+      blur: "px",
+      spread: "%",
+      axisScatter: "%",
+      rainAxis: "%",
+      imageThreshold: "",
+      padding: "px",
+      seed: ""
+    };
+
+    let uploadedImage = null;
+    let edgePoints = [];
+    let maskCache = null;
+    let currentExportUrl = "";
+    let drawQueued = false;
+
+    function mulberry32(seed) {
+      return function random() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function num(id) {
+      return Number(controls[id].value);
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function randomBetween(rng, min, max) {
+      return min + rng() * (max - min);
+    }
+
+    function pickChar(chars, rng, i) {
+      return chars.length ? chars[(i + Math.floor(rng() * chars.length)) % chars.length] : "字";
+    }
+
+    function cleanText() {
+      return controls.textInput.value.replace(/\s+/g, "").split("");
+    }
+
+    function textLines() {
+      const lines = controls.textInput.value
+        .split(/\n+/)
+        .map((line) => line.replace(/\s+/g, "").split("").filter(Boolean))
+        .filter((line) => line.length);
+      return lines.length ? lines : [["字"]];
+    }
+
+    function flatTextLength() {
+      return textLines().reduce((sum, line) => sum + line.length, 0);
+    }
+
+    function imageChar(index, lineIndex = 0) {
+      const lines = textLines();
+      if (controls.imageLineBreaks.checked) {
+        const line = lines[lineIndex % lines.length] || ["字"];
+        return line[index % line.length] || "字";
+      }
+      const flat = lines.flat();
+      return flat[index % flat.length] || "字";
+    }
+
+    function effectiveCount(chars) {
+      const requested = num("count");
+      return requested === 0 ? Math.max(1, chars.length) : requested;
+    }
+
+    function imageTextLimit(fallbackCount, availableSlots = fallbackCount) {
+      const requested = num("count");
+      if (controls.imageRepeatFill.checked) {
+        return requested === 0 ? Math.min(6000, availableSlots) : Math.min(fallbackCount, availableSlots);
+      }
+      const naturalLength = flatTextLength();
+      return Math.min(requested === 0 ? naturalLength : fallbackCount, naturalLength, availableSlots);
+    }
+
+    function selectedAxis() {
+      return document.querySelector("input[name='axis']:checked").value;
+    }
+
+    function selectedFillDirection() {
+      return document.querySelector("input[name='fillDirection']:checked").value;
+    }
+
+    function selectedImageAlign() {
+      return document.querySelector("input[name='imageAlign']:checked").value;
+    }
+
+    function setCanvasSize() {
+      const w = clamp(parseInt(controls.canvasW.value, 10) || 1200, 320, 2600);
+      const h = clamp(parseInt(controls.canvasH.value, 10) || 900, 320, 2600);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    function applyImageAspectToCanvas(img) {
+      const currentWidth = clamp(parseInt(controls.canvasW.value, 10) || 1200, 320, 2600);
+      const nextHeight = clamp(Math.round(currentWidth * (img.height / img.width)), 320, 2600);
+      controls.canvasW.value = String(currentWidth);
+      controls.canvasH.value = String(nextHeight);
+    }
+
+    function clearCanvas(transparent = false) {
+      ctx.save();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!transparent) {
+        ctx.fillStyle = controls.bgColor.value;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.restore();
+    }
+
+    function fontStack() {
+      const custom = controls.customFont.value.trim();
+      return custom ? `"${custom}", ${controls.fontFamily.value}` : controls.fontFamily.value;
+    }
+
+    function drawText(char, x, y, size, angle, alpha, blur) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.globalAlpha = alpha;
+      ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
+      ctx.fillStyle = controls.fontColor.value;
+      ctx.font = `${Math.max(4, size)}px ${fontStack()}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+    }
+
+    function centeredContinuousGroups(groups, count) {
+      const activeGroups = groups.filter((group) => group.length);
+      const total = activeGroups.reduce((sum, group) => sum + group.length, 0);
+      if (!total || !count) return [];
+      if (count >= total) return activeGroups.flat();
+
+      let start = Math.floor(activeGroups.length / 2);
+      let end = start;
+      let capacity = activeGroups[start].length;
+      while (capacity < count && (start > 0 || end < activeGroups.length - 1)) {
+        const leftCap = start > 0 ? activeGroups[start - 1].length : -1;
+        const rightCap = end < activeGroups.length - 1 ? activeGroups[end + 1].length : -1;
+        if (rightCap >= leftCap) {
+          end++;
+          capacity += activeGroups[end].length;
+        } else {
+          start--;
+          capacity += activeGroups[start].length;
+        }
+      }
+      return activeGroups.slice(start, end + 1).flat().slice(0, count);
+    }
+
+    function drawAxisMode(rng, chars) {
+      const count = effectiveCount(chars);
+      const minSize = Math.min(num("minSize"), num("maxSize"));
+      const maxSize = Math.max(num("minSize"), num("maxSize"));
+      const rot = num("rotation") * Math.PI / 180;
+      const blurMax = num("blur");
+      const spread = num("spread") / 100;
+      const axisScatter = num("axisScatter") / 100;
+      const axis = selectedAxis();
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.setLineDash([8, 14]);
+      ctx.beginPath();
+      if (axis === "vertical") {
+        ctx.moveTo(cx, 0);
+        ctx.lineTo(cx, canvas.height);
+      } else {
+        ctx.moveTo(0, cy);
+        ctx.lineTo(canvas.width, cy);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      for (let i = 0; i < count; i++) {
+        const order = count <= 1 ? 0 : i / (count - 1) - 0.5;
+        const side = i % 2 === 0 ? -1 : 1;
+        const crossSize = axis === "vertical" ? canvas.width : canvas.height;
+        const alongSize = axis === "vertical" ? canvas.height : canvas.width;
+        const distance = (0.04 + Math.pow(rng(), 1.55) * 0.24) * crossSize * spread;
+        const drift = randomBetween(rng, -32, 32) * spread;
+        const size = randomBetween(rng, minSize, maxSize) * randomBetween(rng, 0.55, 1.25);
+        const blur = Math.pow(rng(), 1.8) * blurMax;
+        const alpha = clamp(1 - blur / Math.max(1, blurMax + 4), 0.16, 0.95);
+        const centeredAlong = order * alongSize * (0.16 + axisScatter * 0.34);
+        const alongJitter = randomBetween(rng, -1, 1) * axisScatter * alongSize * 0.055;
+        const crossJitter = randomBetween(rng, -1, 1) * axisScatter * crossSize * 0.045;
+        const x = axis === "vertical"
+          ? cx + side * distance + drift + crossJitter
+          : cx + centeredAlong + alongJitter;
+        const y = axis === "vertical"
+          ? cy + centeredAlong + alongJitter
+          : cy + side * distance + drift + crossJitter;
+        const angle = randomBetween(rng, -rot, rot);
+        drawText(chars.length ? chars[i % chars.length] : "字", x, y, size, angle, alpha, blur);
+      }
+    }
+
+    function drawRainMode(rng, chars) {
+      const count = effectiveCount(chars);
+      const minSize = Math.min(num("minSize"), num("maxSize"));
+      const maxSize = Math.max(num("minSize"), num("maxSize"));
+      const blurMax = num("blur");
+      const pad = num("padding");
+      const axisY = canvas.height * (num("rainAxis") / 100);
+      const columnCount = Math.max(5, Math.ceil(count / 18), Math.floor(Math.sqrt(count) * 1.3));
+      const colGap = (canvas.width - pad * 2) / columnCount;
+      const visibleTop = pad;
+      const visibleBottom = canvas.height - pad;
+      const availableHeight = Math.max(80, visibleBottom - visibleTop);
+      let drawn = 0;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.07)";
+      ctx.setLineDash([10, 16]);
+      ctx.beginPath();
+      ctx.moveTo(0, axisY);
+      ctx.lineTo(canvas.width, axisY);
+      ctx.stroke();
+      ctx.restore();
+
+      for (let c = 0; c < columnCount && drawn < count; c++) {
+        const size = randomBetween(rng, minSize, maxSize);
+        const blur = Math.pow(rng(), 1.2) * blurMax;
+        const alpha = clamp(1 - blur / Math.max(1, blurMax + 3), 0.12, 1);
+        const x = pad + c * colGap + randomBetween(rng, colGap * 0.15, colGap * 0.85);
+        const charGap = size * randomBetween(rng, 0.9, 1.28);
+        const desiredLetters = Math.max(4, Math.floor(randomBetween(rng, 5, 18)));
+        const maxVisibleLetters = Math.max(1, Math.floor((availableHeight - size) / charGap) + 1);
+        const columnLetters = Math.min(desiredLetters, maxVisibleLetters, count - drawn);
+        const columnHeight = (columnLetters - 1) * charGap;
+        const centerJitter = randomBetween(rng, -1, 1) * availableHeight * 0.045;
+        const minStart = visibleTop + size * 0.55;
+        const maxStart = visibleBottom - size * 0.55 - columnHeight;
+        const centeredStart = axisY - columnHeight / 2 + centerJitter;
+        const yStart = minStart > maxStart ? canvas.height / 2 - columnHeight / 2 : clamp(centeredStart, minStart, maxStart);
+        const slightAngle = randomBetween(rng, -0.035, 0.035);
+        const depthScale = randomBetween(rng, 0.78, 1.08);
+
+        for (let j = 0; j < columnLetters && drawn < count; j++) {
+          const y = yStart + j * charGap;
+          const fade = j < 2 ? 0.68 + j * 0.16 : 1;
+          drawText(pickChar(chars, rng, drawn), x, y, size * depthScale, slightAngle, alpha * fade, blur);
+          drawn++;
+        }
+      }
+
+      const gradient = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
+      gradient.addColorStop(0, "rgba(0,0,0,0)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.38)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function extractEdges(img) {
+      const sample = document.createElement("canvas");
+      const maxSide = 360;
+      const ratio = Math.min(maxSide / img.width, maxSide / img.height, 1);
+      sample.width = Math.max(1, Math.round(img.width * ratio));
+      sample.height = Math.max(1, Math.round(img.height * ratio));
+      const sctx = sample.getContext("2d", { willReadFrequently: true });
+      sctx.drawImage(img, 0, 0, sample.width, sample.height);
+      const data = sctx.getImageData(0, 0, sample.width, sample.height).data;
+      const points = [];
+      const brightnessAt = (x, y) => {
+        const idx = (y * sample.width + x) * 4;
+        const alpha = data[idx + 3] / 255;
+        return (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114) * alpha + 255 * (1 - alpha);
+      };
+
+      for (let y = 1; y < sample.height - 1; y += 2) {
+        for (let x = 1; x < sample.width - 1; x += 2) {
+          const gx = Math.abs(brightnessAt(x + 1, y) - brightnessAt(x - 1, y));
+          const gy = Math.abs(brightnessAt(x, y + 1) - brightnessAt(x, y - 1));
+          if (gx + gy > 42) {
+            points.push({
+              x: x / sample.width,
+              y: y / sample.height,
+              strength: clamp((gx + gy) / 180, 0.25, 1)
+            });
+          }
+        }
+      }
+      return points;
+    }
+
+    function buildImageMask(img, threshold) {
+      const sample = document.createElement("canvas");
+      const maxSide = 520;
+      const ratio = Math.min(maxSide / img.width, maxSide / img.height, 1);
+      sample.width = Math.max(1, Math.round(img.width * ratio));
+      sample.height = Math.max(1, Math.round(img.height * ratio));
+      const sctx = sample.getContext("2d", { willReadFrequently: true });
+      sctx.drawImage(img, 0, 0, sample.width, sample.height);
+      const pixels = sctx.getImageData(0, 0, sample.width, sample.height).data;
+      const mask = new Uint8Array(sample.width * sample.height);
+      let minX = sample.width;
+      let minY = sample.height;
+      let maxX = 0;
+      let maxY = 0;
+      let filled = 0;
+
+      for (let y = 0; y < sample.height; y++) {
+        for (let x = 0; x < sample.width; x++) {
+          const idx = (y * sample.width + x) * 4;
+          const alpha = pixels[idx + 3];
+          const brightness = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
+          const inside = alpha > 24 && brightness <= threshold;
+          if (inside) {
+            mask[y * sample.width + x] = 1;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+            filled++;
+          }
+        }
+      }
+
+      if (!filled) {
+        return null;
+      }
+      return {
+        width: sample.width,
+        height: sample.height,
+        mask,
+        bounds: {
+          left: minX / sample.width,
+          top: minY / sample.height,
+          right: maxX / sample.width,
+          bottom: maxY / sample.height
+        }
+      };
+    }
+
+    function currentMask() {
+      if (!uploadedImage) return null;
+      const threshold = num("imageThreshold");
+      if (!maskCache || maskCache.image !== uploadedImage || maskCache.threshold !== threshold) {
+        maskCache = {
+          image: uploadedImage,
+          threshold,
+          data: buildImageMask(uploadedImage, threshold)
+        };
+      }
+      return maskCache.data;
+    }
+
+    function maskContains(mask, nx, ny) {
+      if (!mask || nx < 0 || nx > 1 || ny < 0 || ny > 1) return false;
+      const x = clamp(Math.floor(nx * mask.width), 0, mask.width - 1);
+      const y = clamp(Math.floor(ny * mask.height), 0, mask.height - 1);
+      return mask.mask[y * mask.width + x] === 1;
+    }
+
+    function drawFallbackFill(chars) {
+      const size = num("minSize");
+      const direction = selectedFillDirection();
+      const count = imageTextLimit(effectiveCount(chars), 2400);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const rx = canvas.width * 0.22;
+      const ry = canvas.height * 0.34;
+      let drawn = 0;
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.16)";
+      ctx.strokeRect(cx - rx, cy - ry, rx * 2, ry * 2);
+      ctx.restore();
+
+      if (direction === "horizontal") {
+        for (let y = cy - ry; y <= cy + ry && drawn < count; y += size * 1.25) {
+          for (let x = cx - rx; x <= cx + rx && drawn < count; x += size * 0.95) {
+            if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) {
+              drawText(imageChar(drawn, Math.floor((y - (cy - ry)) / (size * 1.25))), x, y, size, 0, 1, 0);
+              drawn++;
+            }
+          }
+        }
+      } else {
+        for (let x = cx - rx; x <= cx + rx && drawn < count; x += size * 1.1) {
+          for (let y = cy - ry; y <= cy + ry && drawn < count; y += size * 1.25) {
+            if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) {
+              drawText(imageChar(drawn, Math.floor((x - (cx - rx)) / (size * 1.1))), x, y, size, 0, 1, 0);
+              drawn++;
+            }
+          }
+        }
+      }
+    }
+
+    function drawImageMode(rng, chars) {
+      const baseCount = effectiveCount(chars);
+      const minSize = Math.min(num("minSize"), num("maxSize"));
+      const maxSize = Math.max(num("minSize"), num("maxSize"));
+      const blurMax = num("blur");
+      const rot = num("rotation") * Math.PI / 180;
+      const pad = num("padding");
+      const rawPoints = edgePoints.length ? edgePoints : fallbackShapePoints(rng, 900);
+      const points = controls.imageLineBreaks.checked
+        ? [...rawPoints].sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
+        : rawPoints;
+      const count = imageTextLimit(baseCount, Math.min(points.length, 1800));
+      const lines = textLines();
+      const lineBands = Math.max(1, lines.length);
+
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.strokeStyle = controls.fontColor.value;
+      ctx.lineWidth = 1;
+      ctx.restore();
+
+      const outlineItems = [];
+      if (controls.imageLineBreaks.checked) {
+        const bands = Array.from({ length: lineBands }, () => []);
+        points.forEach((point) => {
+          bands[Math.min(lineBands - 1, Math.floor(clamp(point.y, 0, 0.999) * lineBands))].push(point);
+        });
+        for (let lineIndex = 0; outlineItems.length < count && lineIndex < lineBands; lineIndex++) {
+          const band = bands[lineIndex].sort((a, b) => a.x - b.x);
+          if (!band.length) continue;
+          const line = lines[lineIndex % lines.length] || ["字"];
+          const wanted = controls.imageRepeatFill.checked
+            ? Math.min(band.length, count - outlineItems.length)
+            : Math.min(band.length, line.length, count - outlineItems.length);
+          const align = selectedImageAlign();
+          const start = align === "center" ? Math.floor((band.length - wanted) / 2) : align === "right" ? band.length - wanted : 0;
+          for (let i = 0; i < wanted; i++) {
+            outlineItems.push({ point: band[start + i], charIndex: i, lineIndex });
+          }
+        }
+        if (!outlineItems.length) return;
+      }
+
+      for (let i = 0; i < count; i++) {
+        const item = controls.imageLineBreaks.checked ? outlineItems[i % outlineItems.length] : null;
+        const p = item ? item.point : points[Math.floor(rng() * points.length)];
+        const jitter = randomBetween(rng, -pad * 0.35, pad * 0.35);
+        const x = pad + p.x * (canvas.width - pad * 2) + jitter;
+        const y = pad + p.y * (canvas.height - pad * 2) + randomBetween(rng, -pad * 0.35, pad * 0.35);
+        const size = randomBetween(rng, minSize, maxSize) * randomBetween(rng, 0.62, 1.16);
+        const angle = randomBetween(rng, -rot, rot);
+        const blur = randomBetween(rng, 0, blurMax * (1 - p.strength * 0.45));
+        const alpha = clamp(0.34 + p.strength * 0.66, 0.24, 1);
+        const lineIndex = item ? item.lineIndex : 0;
+        const charIndex = item ? item.charIndex : i;
+        drawText(imageChar(charIndex, lineIndex), x, y, size, angle, alpha, blur);
+      }
+    }
+
+    function drawImageFillMode(chars) {
+      const requestedCount = effectiveCount(chars);
+      const size = num("minSize");
+      const pad = num("padding");
+      const mask = currentMask();
+      if (!mask) {
+        drawFallbackFill(chars);
+        return;
+      }
+
+      const direction = selectedFillDirection();
+      const areaX = pad;
+      const areaY = pad;
+      const areaW = canvas.width - pad * 2;
+      const areaH = canvas.height - pad * 2;
+      const left = areaX + mask.bounds.left * areaW;
+      const right = areaX + mask.bounds.right * areaW;
+      const top = areaY + mask.bounds.top * areaH;
+      const bottom = areaY + mask.bounds.bottom * areaH;
+      const stepX = size * 0.95;
+      const stepY = size * 1.24;
+      let drawn = 0;
+      let possibleSlots = 0;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.strokeRect(left, top, right - left, bottom - top);
+      ctx.restore();
+
+      if (direction === "horizontal") {
+        for (let y = top + size * 0.55; y <= bottom - size * 0.35; y += stepY) {
+          for (let x = left + size * 0.45; x <= right - size * 0.35; x += stepX) {
+            const nx = (x - areaX) / areaW;
+            const ny = (y - areaY) / areaH;
+            if (maskContains(mask, nx, ny)) possibleSlots++;
+          }
+        }
+        const count = imageTextLimit(requestedCount, possibleSlots);
+        if (!controls.imageLineBreaks.checked) {
+          const rows = [];
+          for (let y = top + size * 0.55; y <= bottom - size * 0.35; y += stepY) {
+            const row = [];
+            for (let x = left + size * 0.45; x <= right - size * 0.35; x += stepX) {
+              const nx = (x - areaX) / areaW;
+              const ny = (y - areaY) / areaH;
+              if (maskContains(mask, nx, ny)) row.push({ x, y });
+            }
+            if (row.length) rows.push(row);
+          }
+          centeredContinuousGroups(rows, count).forEach((slot, index) => {
+            drawText(imageChar(index, 0), slot.x, slot.y, size, 0, 1, 0);
+          });
+          return;
+        }
+        let rowIndex = 0;
+        for (let y = top + size * 0.55; y <= bottom - size * 0.35 && drawn < count; y += stepY, rowIndex++) {
+          const rowSlots = [];
+          for (let x = left + size * 0.45; x <= right - size * 0.35 && drawn < count; x += stepX) {
+            const nx = (x - areaX) / areaW;
+            const ny = (y - areaY) / areaH;
+            if (maskContains(mask, nx, ny)) rowSlots.push(x);
+          }
+          const line = textLines()[rowIndex % textLines().length] || ["字"];
+          const wanted = controls.imageLineBreaks.checked && !controls.imageRepeatFill.checked
+            ? Math.min(rowSlots.length, line.length, count - drawn)
+            : Math.min(rowSlots.length, count - drawn);
+          const align = selectedImageAlign();
+          const start = align === "center" ? Math.floor((rowSlots.length - wanted) / 2) : align === "right" ? rowSlots.length - wanted : 0;
+          for (let i = 0; i < wanted; i++) {
+            drawText(imageChar(i, rowIndex), rowSlots[start + i], y, size, 0, 1, 0);
+            drawn++;
+          }
+        }
+      } else {
+        for (let x = left + size * 0.5; x <= right - size * 0.35; x += stepX * 1.15) {
+          for (let y = top + size * 0.55; y <= bottom - size * 0.35; y += stepY) {
+            const nx = (x - areaX) / areaW;
+            const ny = (y - areaY) / areaH;
+            if (maskContains(mask, nx, ny)) possibleSlots++;
+          }
+        }
+        const count = imageTextLimit(requestedCount, possibleSlots);
+        if (!controls.imageLineBreaks.checked) {
+          const columns = [];
+          for (let x = left + size * 0.5; x <= right - size * 0.35; x += stepX * 1.15) {
+            const column = [];
+            for (let y = top + size * 0.55; y <= bottom - size * 0.35; y += stepY) {
+              const nx = (x - areaX) / areaW;
+              const ny = (y - areaY) / areaH;
+              if (maskContains(mask, nx, ny)) column.push({ x, y });
+            }
+            if (column.length) columns.push(column);
+          }
+          centeredContinuousGroups(columns, count).forEach((slot, index) => {
+            drawText(imageChar(index, 0), slot.x, slot.y, size, 0, 1, 0);
+          });
+          return;
+        }
+        let colIndex = 0;
+        for (let x = left + size * 0.5; x <= right - size * 0.35 && drawn < count; x += stepX * 1.15, colIndex++) {
+          const colSlots = [];
+          for (let y = top + size * 0.55; y <= bottom - size * 0.35 && drawn < count; y += stepY) {
+            const nx = (x - areaX) / areaW;
+            const ny = (y - areaY) / areaH;
+            if (maskContains(mask, nx, ny)) colSlots.push(y);
+          }
+          const line = textLines()[colIndex % textLines().length] || ["字"];
+          const wanted = controls.imageLineBreaks.checked && !controls.imageRepeatFill.checked
+            ? Math.min(colSlots.length, line.length, count - drawn)
+            : Math.min(colSlots.length, count - drawn);
+          const align = selectedImageAlign();
+          const start = align === "center" ? Math.floor((colSlots.length - wanted) / 2) : align === "right" ? colSlots.length - wanted : 0;
+          for (let i = 0; i < wanted; i++) {
+            drawText(imageChar(i, colIndex), x, colSlots[start + i], size, 0, 1, 0);
+            drawn++;
+          }
+        }
+      }
+    }
+
+    function fallbackShapePoints(rng, total) {
+      const points = [];
+      for (let i = 0; i < total; i++) {
+        const t = (i / total) * Math.PI * 2;
+        const wobble = 0.08 * Math.sin(t * 5) + 0.04 * Math.cos(t * 9);
+        points.push({
+          x: 0.5 + Math.cos(t) * (0.22 + wobble),
+          y: 0.5 + Math.sin(t) * (0.34 - wobble),
+          strength: 0.7 + rng() * 0.3
+        });
+      }
+      return points;
+    }
+
+    function render(transparent = false) {
+      setCanvasSize();
+      updateLabels();
+      clearCanvas(transparent);
+      const rng = mulberry32(num("seed"));
+      const chars = cleanText();
+      const mode = controls.mode.value;
+      const isImageMode = mode === "image" || mode === "imageFill";
+      const lineBreakActive = isImageMode && controls.imageLineBreaks.checked;
+      const showControl = (id, visible) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = visible ? "grid" : "none";
+      };
+
+      document.getElementById("axisWrap").style.display = mode === "axis" ? "grid" : "none";
+      document.getElementById("imageWrap").style.display = isImageMode ? "grid" : "none";
+      document.getElementById("fillDirectionWrap").style.display = mode === "imageFill" ? "grid" : "none";
+      document.getElementById("imageLineBreakWrap").style.display = isImageMode ? "flex" : "none";
+      document.getElementById("imageRepeatWrap").style.display = isImageMode ? "flex" : "none";
+      document.getElementById("imageAlignWrap").style.display = lineBreakActive ? "grid" : "none";
+
+      showControl("countWrap", true);
+      showControl("minSizeWrap", true);
+      showControl("maxSizeWrap", mode !== "imageFill");
+      showControl("rotationWrap", mode === "axis" || mode === "image");
+      showControl("blurWrap", mode === "axis" || mode === "rain" || mode === "image");
+      showControl("spreadWrap", mode === "axis");
+      showControl("axisScatterWrap", mode === "axis");
+      showControl("rainAxisWrap", mode === "rain");
+      showControl("imageThresholdWrap", mode === "imageFill");
+      showControl("paddingWrap", mode === "rain" || isImageMode);
+      showControl("seedWrap", mode !== "imageFill");
+
+      if (mode === "axis") drawAxisMode(rng, chars);
+      if (mode === "rain") drawRainMode(rng, chars);
+      if (mode === "image") drawImageMode(rng, chars);
+      if (mode === "imageFill") drawImageFillMode(chars);
+    }
+
+    function draw() {
+      render(false);
+    }
+
+    function queueDraw() {
+      if (drawQueued) return;
+      drawQueued = true;
+      requestAnimationFrame(() => {
+        drawQueued = false;
+        draw();
+      });
+    }
+
+    function updateLabels() {
+      Object.keys(valueLabels).forEach((id) => {
+        const el = document.getElementById(`${id}Value`);
+        if (!el) return;
+        if (id === "count" && controls.count.value === "0") {
+          el.textContent = `输入文字数 (${Math.max(1, cleanText().length)})`;
+          return;
+        }
+        el.textContent = `${controls[id].value}${valueLabels[id]}`;
+      });
+    }
+
+    function wireEvents() {
+      document.querySelectorAll("input, select, textarea").forEach((el) => {
+        if (el.type !== "file") el.addEventListener("input", queueDraw);
+      });
+      document.querySelectorAll("input[name='axis']").forEach((el) => el.addEventListener("change", queueDraw));
+      document.querySelectorAll("input[name='fillDirection']").forEach((el) => el.addEventListener("change", queueDraw));
+      document.querySelectorAll("input[name='imageAlign']").forEach((el) => el.addEventListener("change", queueDraw));
+
+      controls.imageInput.addEventListener("change", (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const img = new Image();
+        img.onload = () => {
+          uploadedImage = img;
+          applyImageAspectToCanvas(img);
+          edgePoints = extractEdges(img);
+          maskCache = null;
+          queueDraw();
+        };
+        img.src = URL.createObjectURL(file);
+      });
+
+      document.getElementById("randomize").addEventListener("click", () => {
+        controls.seed.value = String(Math.floor(Math.random() * 9998) + 1);
+        queueDraw();
+      });
+
+      document.getElementById("download").addEventListener("click", () => {
+        const status = document.getElementById("downloadStatus");
+        status.textContent = "正在生成...";
+        const transparent = controls.transparentExport.checked;
+        if (transparent) render(true);
+        canvas.toBlob((blob) => {
+          if (transparent) draw();
+          if (!blob) {
+            status.textContent = "生成失败";
+            return;
+          }
+          if (currentExportUrl) URL.revokeObjectURL(currentExportUrl);
+          const url = URL.createObjectURL(blob);
+          currentExportUrl = url;
+          const link = document.createElement("a");
+          const suffix = transparent ? "transparent" : "solid";
+          link.download = `text-layout-${controls.mode.value}-${suffix}-${Date.now()}.png`;
+          link.href = url;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+
+          const fileName = `text-layout-${controls.mode.value}-${suffix}.png`;
+          const preview = document.getElementById("exportPreview");
+          const image = document.getElementById("exportImage");
+          const openImage = document.getElementById("openImage");
+          const saveImage = document.getElementById("saveImage");
+          image.src = url;
+          openImage.href = url;
+          saveImage.href = url;
+          saveImage.download = fileName;
+          preview.hidden = false;
+
+          status.textContent = "已生成 PNG";
+          window.setTimeout(() => {
+            if (status.textContent === "已生成 PNG") status.textContent = "";
+          }, 2400);
+        }, "image/png");
+      });
+
+      document.getElementById("closePreview").addEventListener("click", () => {
+        document.getElementById("exportPreview").hidden = true;
+      });
+    }
+
+    wireEvents();
+    draw();
+  </script>
+</body>
+</html>
