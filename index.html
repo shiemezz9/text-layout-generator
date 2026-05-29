@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>文字排版效果生成器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+SC:wght@400;700;900&family=Noto+Serif+SC:wght@400;700;900&family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&display=swap" rel="stylesheet">
   <style>
     :root {
       color-scheme: dark;
@@ -187,6 +190,21 @@
       letter-spacing: 0;
     }
 
+    .credits {
+      color: #9f988f;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .credits p {
+      margin: 0 0 8px;
+    }
+
+    .credits strong {
+      color: #f4dfb4;
+      font-weight: 700;
+    }
+
     label {
       display: grid;
       gap: 7px;
@@ -203,14 +221,23 @@
     }
 
     .control-head {
+      align-items: center;
       display: flex;
       justify-content: space-between;
       gap: 8px;
     }
 
+    .control-head > span:first-child {
+      flex: 0 0 auto;
+      min-width: 40px;
+      white-space: nowrap;
+    }
+
     .value {
       color: #e9d3a5;
+      margin-left: auto;
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
 
     input,
@@ -337,88 +364,103 @@
   <div class="app">
     <aside>
       <section class="section">
-        <p class="section-title">内容</p>
+        <p class="section-title">鍐呭</p>
         <label>
-          文字
-          <textarea id="textInput">黑い卵を割ってしまいました
-锅就是人生的缩影
-文字像雨一样落下
-漂浮 边界 深浅 方向</textarea>
+          鏂囧瓧
+          <textarea id="textInput">滚滚长江东逝水</textarea>
         </label>
         <label>
-          效果模式
+          鏁堟灉妯″紡
           <select id="mode">
             <option value="axis">1. 中轴线两端漂浮</option>
             <option value="rain">2. 竖排雨落层次</option>
-            <option value="image">3. 图片轮廓框字</option>
-            <option value="imageFill">4. 图片填充字</option>
+            <option value="barrage">3. 横排弹幕模式</option>
+            <option value="image">4. 图片轮廓框字</option>
+            <option value="imageFill">5. 图片填充字</option>
           </select>
         </label>
         <label id="axisWrap">
-          中轴方向
+          涓酱鏂瑰悜
           <span class="segmented">
-            <label><input type="radio" name="axis" value="vertical" checked><span>竖轴</span></label>
-            <label><input type="radio" name="axis" value="horizontal"><span>横轴</span></label>
+            <label><input type="radio" name="axis" value="vertical" checked><span>绔栬酱</span></label>
+            <label><input type="radio" name="axis" value="horizontal"><span>妯酱</span></label>
           </span>
         </label>
+        <label id="rainOrderWrap">
+          闆ㄨ惤鏂囧瓧椤哄簭
+          <select id="rainOrder">
+            <option value="normal">杈撳叆椤哄簭</option>
+            <option value="reverse">鍊掑簭</option>
+            <option value="shuffle">姣忓垪闅忔満</option>
+          </select>
+        </label>
+        <label class="checkbox-row" id="rainLineBreakWrap">
+          <input id="rainLineBreaks" type="checkbox" />
+          <span>鎸夎緭鍏ユ崲琛屽垎閰嶉洦鍒?/span>
+        </label>
+        <label class="checkbox-row" id="strictInputCountWrap">
+          <input id="strictInputCount" type="checkbox" checked />
+          <span>涓ユ牸鎸夌収杈撳叆瀛楁暟杈撳嚭</span>
+        </label>
+        <label class="checkbox-row" id="strictInputOrderWrap">
+          <input id="strictInputOrder" type="checkbox" checked />
+          <span>涓ユ牸鎸夌収杈撳叆椤哄簭鎺掑垪</span>
+        </label>
         <label id="imageWrap">
-          上传图片
+          涓婁紶鍥剧墖
           <input class="file-input" id="imageInput" type="file" accept="image/*" />
         </label>
         <label id="fillDirectionWrap">
-          填充方向
+          濉厖鏂瑰悜
           <span class="segmented">
-            <label><input type="radio" name="fillDirection" value="horizontal" checked><span>横排</span></label>
-            <label><input type="radio" name="fillDirection" value="vertical"><span>竖排</span></label>
+            <label><input type="radio" name="fillDirection" value="horizontal" checked><span>妯帓</span></label>
+            <label><input type="radio" name="fillDirection" value="vertical"><span>绔栨帓</span></label>
           </span>
         </label>
         <label id="imageAlignWrap">
-          换行对齐
+          鎹㈣瀵归綈
           <span class="segmented segmented-three">
-            <label><input type="radio" name="imageAlign" value="left" checked><span>居左</span></label>
-            <label><input type="radio" name="imageAlign" value="center"><span>居中</span></label>
-            <label><input type="radio" name="imageAlign" value="right"><span>居右</span></label>
+            <label><input type="radio" name="imageAlign" value="left" checked><span>灞呭乏</span></label>
+            <label><input type="radio" name="imageAlign" value="center"><span>灞呬腑</span></label>
+            <label><input type="radio" name="imageAlign" value="right"><span>灞呭彸</span></label>
           </span>
         </label>
         <label class="checkbox-row" id="imageLineBreakWrap">
           <input id="imageLineBreaks" type="checkbox" />
-          <span>应用输入文字换行</span>
+          <span>搴旂敤杈撳叆鏂囧瓧鎹㈣</span>
         </label>
         <label class="checkbox-row" id="imageRepeatWrap">
           <input id="imageRepeatFill" type="checkbox" checked />
-          <span>重复文字以填满图形</span>
+          <span>閲嶅鏂囧瓧浠ュ～婊″浘褰?/span>
         </label>
       </section>
 
       <section class="section">
-        <p class="section-title">样式</p>
+        <p class="section-title">鏍峰紡</p>
         <div class="row">
           <label>
-            背景颜色
+            鑳屾櫙棰滆壊
             <input id="bgColor" type="color" value="#11100f" />
           </label>
           <label>
-            字体颜色
+            瀛椾綋棰滆壊
             <input id="fontColor" type="color" value="#f7efe1" />
           </label>
         </div>
         <label class="checkbox-row">
           <input id="transparentExport" type="checkbox" />
-          <span>下载时使用透明背景</span>
+          <span>涓嬭浇鏃朵娇鐢ㄩ€忔槑鑳屾櫙</span>
         </label>
         <label>
-          字体
+          瀛椾綋
           <select id="fontFamily">
-            <option value="'Noto Serif SC', 'Songti SC', SimSun, serif">宋体 / 明朝</option>
-            <option value="'Noto Sans SC', 'Microsoft YaHei', sans-serif">黑体 / 雅黑</option>
-            <option value="'KaiTi', 'STKaiti', serif">楷体</option>
-            <option value="'Yu Mincho', 'Hiragino Mincho ProN', serif">日文明朝</option>
-            <option value="Impact, Haettenschweiler, sans-serif">厚重海报体</option>
+            <option value="'Noto Serif SC', 'Songti SC', SimSun, serif">琛嚎浣擄細Noto Serif SC</option>
+            <option value="'Noto Sans SC', 'Microsoft YaHei', sans-serif">闈炶‖绾夸綋锛歂oto Sans SC</option>
+            <option value="'Noto Sans SC', 'Microsoft YaHei', sans-serif" data-weight="900">绮椾綋锛歂oto Sans SC Black</option>
+            <option value="'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif">标题体：站酷庆科黄油体</option>
+            <option value="'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif">圆趣体：站酷快乐体</option>
+            <option value="'DotGothic16', 'Noto Sans SC', monospace">鍍忕礌椋庯細DotGothic16</option>
           </select>
-        </label>
-        <label>
-          自定义字体名
-          <input id="customFont" type="text" placeholder="例如：Source Han Serif SC" />
         </label>
       </section>
 
@@ -452,6 +494,22 @@
           <span class="control-head"><span>上下分散程度</span><span class="value" id="axisScatterValue"></span></span>
           <input id="axisScatter" type="range" min="0" max="100" value="35" />
         </label>
+        <label class="checkbox-row" id="axisBoxWrap">
+          <input id="axisBox" type="checkbox" />
+          <span>清晰字随机添加色块</span>
+        </label>
+        <label id="axisBoxChanceWrap">
+          <span class="control-head"><span>色块比例</span><span class="value" id="axisBoxChanceValue"></span></span>
+          <input id="axisBoxChance" type="range" min="0" max="100" value="25" />
+        </label>
+        <label class="checkbox-row" id="axisLineWrap">
+          <input id="axisLine" type="checkbox" />
+          <span>启动连线</span>
+        </label>
+        <label id="axisLineColorWrap">
+          连线颜色
+          <input id="axisLineColor" type="color" value="#b6654c" />
+        </label>
         <label id="rainAxisWrap">
           <span class="control-head"><span>雨落横轴中心</span><span class="value" id="rainAxisValue"></span></span>
           <input id="rainAxis" type="range" min="10" max="90" value="50" />
@@ -471,18 +529,25 @@
       </section>
 
       <section class="section">
-        <p class="section-title">画布</p>
+        <p class="section-title">鐢诲竷</p>
         <div class="row">
           <label>
-            宽度
+            瀹藉害
             <input id="canvasW" type="text" value="1200" />
           </label>
           <label>
-            高度
+            楂樺害
             <input id="canvasH" type="text" value="900" />
           </label>
         </div>
-        <p class="hint">图片轮廓模式会读取图片明暗边缘，适合黑白剪影、透明 PNG 或对比强的形状。</p>
+        <p class="hint">鍥剧墖杞粨妯″紡浼氳鍙栧浘鐗囨槑鏆楄竟缂橈紝閫傚悎榛戠櫧鍓奖銆侀€忔槑 PNG 鎴栧姣斿己鐨勫舰鐘躲€?/p>
+      </section>
+
+      <section class="section credits">
+        <p><strong>制作者</strong> @shiemezz</p>
+        <p>Copyright © 2026 shiemezz. 页面代码与界面设计保留作者署名。</p>
+        <p>生成图片的文字、上传图片及最终用途请由使用者自行确认授权；请勿上传或生成侵犯他人版权、肖像权、商标权或隐私权的内容。</p>
+        <p>本工具使用的网络字体遵循其各自开源或免费商用授权条款；导出作品中的字体使用范围请以字体原始授权为准。</p>
       </section>
     </aside>
 
@@ -491,8 +556,8 @@
         <h1>文字排版效果生成器</h1>
         <div class="header-actions">
           <span class="download-status" id="downloadStatus" aria-live="polite"></span>
-          <button id="randomize">随机生成</button>
-          <button id="download">下载 PNG</button>
+          <button id="randomize">闅忔満鐢熸垚</button>
+          <button id="download">涓嬭浇 PNG</button>
         </div>
       </header>
       <div class="canvas-shell">
@@ -500,13 +565,13 @@
       </div>
       <div class="export-preview" id="exportPreview" hidden>
         <div class="export-preview-title">
-          <span>PNG 已生成</span>
+          <span>PNG 已生成，右键图片可保存</span>
           <button id="closePreview">关闭</button>
         </div>
-        <img id="exportImage" alt="生成的文字排版 PNG 预览" />
+        <img id="exportImage" alt="鐢熸垚鐨勬枃瀛楁帓鐗?PNG 棰勮" />
         <div class="export-preview-actions">
-          <a id="openImage" href="#" target="_blank" rel="noopener">打开图片</a>
-          <a id="saveImage" href="#" download="text-layout.png">保存 PNG</a>
+          <a id="openImage" href="#" target="_blank" rel="noopener">鎵撳紑鍥剧墖</a>
+          <a id="saveImage" href="#" download="text-layout.png">淇濆瓨 PNG</a>
         </div>
       </div>
     </main>
@@ -518,14 +583,118 @@
     const controls = {};
     const ids = [
       "textInput", "mode", "bgColor", "fontColor", "fontFamily", "count",
-      "minSize", "maxSize", "rotation", "blur", "spread", "padding",
-      "seed", "canvasW", "canvasH", "imageInput", "customFont", "transparentExport", "axisScatter", "rainAxis", "imageThreshold",
-      "imageLineBreaks", "imageRepeatFill"
+      "minSize", "maxSize", "rotation", "blur", "spread", "padding", "axisBox", "axisBoxChance", "axisLine", "axisLineColor",
+      "seed", "canvasW", "canvasH", "imageInput", "transparentExport", "axisScatter", "rainAxis", "imageThreshold",
+      "imageLineBreaks", "imageRepeatFill", "rainOrder", "rainLineBreaks", "strictInputCount", "strictInputOrder"
     ];
 
     ids.forEach((id) => {
       controls[id] = document.getElementById(id);
     });
+
+    [
+      ["normal", "浠庡乏鑷冲彸"],
+      ["reverse", "浠庡彸鑷冲乏"],
+      ["shuffle", "鍒楀簭闅忔満"]
+    ].forEach(([value, label]) => {
+      const option = controls.rainOrder.querySelector(`option[value="${value}"]`);
+      if (option) option.textContent = label;
+    });
+
+    function setLeadingText(selector, text) {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      const node = [...el.childNodes].find((child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim());
+      if (node) node.textContent = `\n          ${text}\n          `;
+    }
+
+    function repairLabels() {
+      document.title = "文字排版效果生成器";
+      const sectionTitles = document.querySelectorAll(".section-title");
+      ["内容", "样式", "排版滑杆", "画布"].forEach((text, index) => {
+        if (sectionTitles[index]) sectionTitles[index].textContent = text;
+      });
+      document.querySelector("h1").textContent = "文字排版效果生成器";
+      setLeadingText('label:has(#textInput)', "文字");
+      setLeadingText('label:has(#mode)', "效果模式");
+      setLeadingText("#axisWrap", "中轴方向");
+      setLeadingText("#rainOrderWrap", "雨落文字顺序");
+      setLeadingText("#imageWrap", "上传图片");
+      setLeadingText("#fillDirectionWrap", "填充方向");
+      setLeadingText("#imageAlignWrap", "换行对齐");
+      setLeadingText('label:has(#bgColor)', "背景颜色");
+      setLeadingText('label:has(#fontColor)', "字体颜色");
+      setLeadingText('label:has(#fontFamily)', "字体");
+      setLeadingText('label:has(#canvasW)', "宽度");
+      setLeadingText('label:has(#canvasH)', "高度");
+      setLeadingText("#axisLineColorWrap", "连线颜色");
+      [
+        ["#mode option[value='axis']", "1. 中轴线两端漂浮"],
+        ["#mode option[value='rain']", "2. 竖排雨落层次"],
+        ["#mode option[value='barrage']", "3. 横排弹幕模式"],
+        ["#mode option[value='image']", "4. 图片轮廓框字"],
+        ["#mode option[value='imageFill']", "5. 图片填充字"],
+        ["input[name='axis'][value='vertical'] + span", "竖轴"],
+        ["input[name='axis'][value='horizontal'] + span", "横轴"],
+        ["input[name='fillDirection'][value='horizontal'] + span", "横排"],
+        ["input[name='fillDirection'][value='vertical'] + span", "竖排"],
+        ["input[name='imageAlign'][value='left'] + span", "居左"],
+        ["input[name='imageAlign'][value='center'] + span", "居中"],
+        ["input[name='imageAlign'][value='right'] + span", "居右"],
+        ["#rainOrder option[value='normal']", "从左至右"],
+        ["#rainOrder option[value='reverse']", "从右至左"],
+        ["#rainOrder option[value='shuffle']", "列序随机"],
+        ["#strictInputCountWrap span", "严格按照输入字数输出"],
+        ["#strictInputOrderWrap span", "严格按照输入顺序排列"],
+        ["#rainLineBreakWrap span", "按输入换行分配雨列"],
+        ["#imageLineBreakWrap span", "应用输入文字换行"],
+        ["#imageRepeatWrap span", "重复文字以填满图形"],
+        ["label:has(#transparentExport) span", "下载时使用透明背景"],
+        ["#axisBoxWrap span", "清晰字随机添加色块"],
+        ["#axisLineWrap span", "启动连线"],
+        ["#countWrap .control-head span:first-child", "文字数量"],
+        ["#minSizeWrap .control-head span:first-child", "最小字号"],
+        ["#maxSizeWrap .control-head span:first-child", "最大字号"],
+        ["#rotationWrap .control-head span:first-child", "旋转幅度"],
+        ["#blurWrap .control-head span:first-child", "随机模糊"],
+        ["#spreadWrap .control-head span:first-child", "分散程度"],
+        ["#axisScatterWrap .control-head span:first-child", "上下分散程度"],
+        ["#axisBoxChanceWrap .control-head span:first-child", "色块比例"],
+        ["#rainAxisWrap .control-head span:first-child", "雨落横轴中心"],
+        ["#imageThresholdWrap .control-head span:first-child", "图片阈值"],
+        ["#paddingWrap .control-head span:first-child", "边距 / 轮廓间距"],
+        ["#seedWrap .control-head span:first-child", "随机种子"],
+        ["#randomize", "随机生成"],
+        ["#download", "下载 PNG"],
+        [".export-preview-title span", "PNG 已生成，右键图片可保存"],
+        ["#closePreview", "关闭"],
+        ["#openImage", "打开图片"],
+        ["#saveImage", "保存 PNG"]
+      ].forEach(([selector, text]) => {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = text;
+      });
+      const fontOptions = controls.fontFamily.options;
+      if (fontOptions[0]) fontOptions[0].textContent = "衬线体：Noto Serif SC";
+      if (fontOptions[1]) fontOptions[1].textContent = "非衬线体：Noto Sans SC";
+      if (fontOptions[2]) fontOptions[2].textContent = "粗体：Noto Sans SC Black";
+      if (fontOptions[3]) fontOptions[3].textContent = "标题体：站酷庆科黄油体";
+      if (fontOptions[4]) fontOptions[4].textContent = "圆趣体：站酷快乐体";
+      if (fontOptions[5]) fontOptions[5].textContent = "像素风：DotGothic16";
+      const hint = document.querySelector(".hint");
+      if (hint) hint.textContent = "图片轮廓模式会读取图片明暗边缘，适合黑白剪影、透明 PNG 或对比强的形状。";
+      const credits = document.querySelector(".credits");
+      if (credits) {
+        credits.innerHTML = `
+          <p><strong>制作者</strong> @shiemezz</p>
+          <p>Copyright © 2026 shiemezz. 页面代码与界面设计保留作者署名。</p>
+          <p>生成图片的文字、上传图片及最终用途请由使用者自行确认授权；请勿上传或生成侵犯他人版权、肖像权、商标权或隐私权的内容。</p>
+          <p>本工具使用的网络字体遵循其各自开源或免费商用授权条款；导出作品中的字体使用范围请以字体原始授权为准。</p>
+        `;
+      }
+      const exportImage = document.getElementById("exportImage");
+      if (exportImage) exportImage.alt = "生成的文字排版 PNG 预览";
+    }
 
     const valueLabels = {
       count: "",
@@ -535,6 +704,7 @@
       blur: "px",
       spread: "%",
       axisScatter: "%",
+      axisBoxChance: "%",
       rainAxis: "%",
       imageThreshold: "",
       padding: "px",
@@ -569,18 +739,36 @@
     }
 
     function pickChar(chars, rng, i) {
-      return chars.length ? chars[(i + Math.floor(rng() * chars.length)) % chars.length] : "字";
+      return chars.length ? chars[i % chars.length] : "字";
+    }
+
+    function lineChars(line) {
+      return line
+        .replace(/\r/g, "")
+        .replace(/[\t\f\v\u00a0]+/g, " ")
+        .split("");
     }
 
     function cleanText() {
-      return controls.textInput.value.replace(/\s+/g, "").split("");
+      return controls.textInput.value
+        .split(/\n+/)
+        .map(lineChars)
+        .flat();
+    }
+
+    function strictInputCountActive() {
+      return Boolean(controls.strictInputCount && controls.strictInputCount.checked);
+    }
+
+    function strictInputOrderActive() {
+      return Boolean(controls.strictInputOrder && controls.strictInputOrder.checked);
     }
 
     function textLines() {
       const lines = controls.textInput.value
         .split(/\n+/)
-        .map((line) => line.replace(/\s+/g, "").split("").filter(Boolean))
-        .filter((line) => line.length);
+        .map(lineChars)
+        .filter((line) => line.some((char) => char !== " "));
       return lines.length ? lines : [["字"]];
     }
 
@@ -599,11 +787,13 @@
     }
 
     function effectiveCount(chars) {
+      if (strictInputCountActive()) return chars.length;
       const requested = num("count");
       return requested === 0 ? Math.max(1, chars.length) : requested;
     }
 
     function imageTextLimit(fallbackCount, availableSlots = fallbackCount) {
+      if (strictInputCountActive()) return Math.min(flatTextLength(), availableSlots);
       const requested = num("count");
       if (controls.imageRepeatFill.checked) {
         return requested === 0 ? Math.min(6000, availableSlots) : Math.min(fallbackCount, availableSlots);
@@ -622,6 +812,55 @@
 
     function selectedImageAlign() {
       return document.querySelector("input[name='imageAlign']:checked").value;
+    }
+
+    function orderedCharFromLine(line, index, order, rng) {
+      if (!line.length) return "字";
+      if (order === "reverse") return line[(line.length - 1 - (index % line.length) + line.length) % line.length];
+      if (order === "shuffle") {
+        const shuffled = [...line];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled[index % shuffled.length] || "字";
+      }
+      return line[index % line.length] || "字";
+    }
+
+    function orderedLine(line, order, rng) {
+      if (order === "reverse") return [...line].reverse();
+      if (order === "shuffle") {
+        const shuffled = [...line];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      }
+      return [...line];
+    }
+
+    function columnVisualIndexes(length, order, rng) {
+      const indexes = Array.from({ length }, (_, index) => index);
+      if (order === "reverse") return indexes.reverse();
+      if (order === "shuffle") {
+        const shuffled = [...indexes];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      }
+      return indexes;
+    }
+
+    function rainChar(columnIndex, rowIndex, globalIndex, rng) {
+      const lines = textLines();
+      const flat = lines.flat();
+      const source = controls.rainLineBreaks.checked ? (lines[columnIndex % lines.length] || ["字"]) : flat;
+      const index = controls.rainLineBreaks.checked ? rowIndex : globalIndex;
+      return source.length ? source[index % source.length] : "字";
     }
 
     function setCanvasSize() {
@@ -651,8 +890,7 @@
     }
 
     function fontStack() {
-      const custom = controls.customFont.value.trim();
-      return custom ? `"${custom}", ${controls.fontFamily.value}` : controls.fontFamily.value;
+      return controls.fontFamily.value;
     }
 
     function drawText(char, x, y, size, angle, alpha, blur) {
@@ -662,7 +900,29 @@
       ctx.globalAlpha = alpha;
       ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
       ctx.fillStyle = controls.fontColor.value;
-      ctx.font = `${Math.max(4, size)}px ${fontStack()}`;
+      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      ctx.font = `${weight} ${Math.max(4, size)}px ${fontStack()}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+    }
+
+    function drawBoxedText(char, x, y, size, angle, alpha) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.globalAlpha = alpha;
+      ctx.filter = "none";
+      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      const fontSize = Math.max(4, size);
+      ctx.font = `${weight} ${fontSize}px ${fontStack()}`;
+      const metrics = ctx.measureText(char);
+      const boxW = Math.max(fontSize * 1.25, metrics.width + fontSize * 0.55);
+      const boxH = fontSize * 1.32;
+      ctx.fillStyle = controls.fontColor.value;
+      ctx.fillRect(-boxW / 2, -boxH / 2, boxW, boxH);
+      ctx.fillStyle = controls.bgColor.value;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(char, 0, 0);
@@ -698,8 +958,11 @@
       const maxSize = Math.max(num("minSize"), num("maxSize"));
       const rot = num("rotation") * Math.PI / 180;
       const blurMax = num("blur");
+      const boxedTextEnabled = controls.axisBox.checked;
+      const boxedTextChance = num("axisBoxChance") / 100;
       const spread = num("spread") / 100;
       const axisScatter = num("axisScatter") / 100;
+      const strictOrder = strictInputOrderActive();
       const axis = selectedAxis();
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
@@ -718,6 +981,8 @@
       ctx.stroke();
       ctx.restore();
 
+      const items = [];
+
       for (let i = 0; i < count; i++) {
         const order = count <= 1 ? 0 : i / (count - 1) - 0.5;
         const side = i % 2 === 0 ? -1 : 1;
@@ -726,10 +991,11 @@
         const distance = (0.04 + Math.pow(rng(), 1.55) * 0.24) * crossSize * spread;
         const drift = randomBetween(rng, -32, 32) * spread;
         const size = randomBetween(rng, minSize, maxSize) * randomBetween(rng, 0.55, 1.25);
-        const blur = Math.pow(rng(), 1.8) * blurMax;
+        const boxedText = boxedTextEnabled && rng() < boxedTextChance;
+        const blur = boxedText ? 0 : Math.pow(rng(), 1.8) * blurMax;
         const alpha = clamp(1 - blur / Math.max(1, blurMax + 4), 0.16, 0.95);
         const centeredAlong = order * alongSize * (0.16 + axisScatter * 0.34);
-        const alongJitter = randomBetween(rng, -1, 1) * axisScatter * alongSize * 0.055;
+        const alongJitter = strictOrder ? 0 : randomBetween(rng, -1, 1) * axisScatter * alongSize * 0.055;
         const crossJitter = randomBetween(rng, -1, 1) * axisScatter * crossSize * 0.045;
         const x = axis === "vertical"
           ? cx + side * distance + drift + crossJitter
@@ -738,8 +1004,37 @@
           ? cy + centeredAlong + alongJitter
           : cy + side * distance + drift + crossJitter;
         const angle = randomBetween(rng, -rot, rot);
-        drawText(chars.length ? chars[i % chars.length] : "字", x, y, size, angle, alpha, blur);
+        const char = chars.length ? chars[i % chars.length] : "字";
+        items.push({ char, x, y, size, angle, alpha, blur, boxedText });
       }
+
+      if (controls.axisLine.checked && items.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = controls.axisLineColor.value;
+        ctx.globalAlpha = 0.82;
+        ctx.lineWidth = Math.max(1, Math.min(3, (minSize + maxSize) / 90));
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        items.forEach((item, index) => {
+          if (index === 0) {
+            ctx.moveTo(item.x, item.y);
+          } else {
+            ctx.lineTo(item.x, item.y);
+          }
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      items.forEach((item) => {
+        const { char, x, y, size, angle, alpha, blur, boxedText } = item;
+        if (boxedText) {
+          drawBoxedText(char, x, y, size, angle, alpha);
+        } else {
+          drawText(char, x, y, size, angle, alpha, blur);
+        }
+      });
     }
 
     function drawRainMode(rng, chars) {
@@ -754,6 +1049,7 @@
       const visibleTop = pad;
       const visibleBottom = canvas.height - pad;
       const availableHeight = Math.max(80, visibleBottom - visibleTop);
+      const visualIndexes = columnVisualIndexes(columnCount, controls.rainOrder.value, rng);
       let drawn = 0;
 
       ctx.save();
@@ -765,11 +1061,56 @@
       ctx.stroke();
       ctx.restore();
 
-      for (let c = 0; c < columnCount && drawn < count; c++) {
+      if (strictInputCountActive()) {
+        const lines = textLines();
+        let strictColumns = [];
+
+        if (controls.rainLineBreaks.checked) {
+          strictColumns = lines.map((line) => [...line]).filter((line) => line.length);
+        } else {
+          const flat = lines.flat();
+          const strictColumnCount = Math.max(1, Math.min(flat.length, Math.ceil(flat.length / 8), Math.floor(Math.sqrt(flat.length) * 1.2)));
+          strictColumns = Array.from({ length: strictColumnCount }, (_, c) => {
+            const start = Math.floor(c * flat.length / strictColumnCount);
+            const end = Math.floor((c + 1) * flat.length / strictColumnCount);
+            return flat.slice(start, end);
+          }).filter((line) => line.length);
+        }
+
+        const strictColGap = (canvas.width - pad * 2) / Math.max(1, strictColumns.length);
+        const visualIndexes = columnVisualIndexes(strictColumns.length, controls.rainOrder.value, rng);
+        strictColumns.forEach((column, c) => {
+          const baseSize = randomBetween(rng, minSize, maxSize);
+          const blur = Math.pow(rng(), 1.2) * blurMax;
+          const alpha = clamp(1 - blur / Math.max(1, blurMax + 3), 0.12, 1);
+          const visualIndex = visualIndexes[c] ?? c;
+          const x = pad + strictColGap * (visualIndex + 0.5) + randomBetween(rng, -strictColGap * 0.08, strictColGap * 0.08);
+          const fittedGap = column.length > 1 ? Math.min(baseSize * randomBetween(rng, 0.95, 1.22), availableHeight / (column.length - 1)) : baseSize;
+          const renderSize = column.length > 1 ? Math.max(4, Math.min(baseSize, fittedGap * 0.92)) : baseSize;
+          const columnHeight = (column.length - 1) * fittedGap;
+          const centerJitter = randomBetween(rng, -1, 1) * availableHeight * 0.035;
+          const minStart = visibleTop + renderSize * 0.55;
+          const maxStart = visibleBottom - renderSize * 0.55 - columnHeight;
+          const centeredStart = axisY - columnHeight / 2 + centerJitter;
+          const yStart = minStart > maxStart ? minStart : clamp(centeredStart, minStart, maxStart);
+          const slightAngle = randomBetween(rng, -0.025, 0.025);
+          const depthScale = randomBetween(rng, 0.78, 1.08);
+
+          column.forEach((char, j) => {
+            const y = yStart + j * fittedGap;
+            const fade = j < 2 ? 0.68 + j * 0.16 : 1;
+            drawText(char, x, y, renderSize * depthScale, slightAngle, alpha * fade, blur);
+            drawn++;
+          });
+        });
+      }
+
+      for (let c = 0; !strictInputCountActive() && c < columnCount && drawn < count; c++) {
         const size = randomBetween(rng, minSize, maxSize);
         const blur = Math.pow(rng(), 1.2) * blurMax;
         const alpha = clamp(1 - blur / Math.max(1, blurMax + 3), 0.12, 1);
-        const x = pad + c * colGap + randomBetween(rng, colGap * 0.15, colGap * 0.85);
+        const visualIndex = visualIndexes[c] ?? c;
+        const x = pad + visualIndex * colGap + randomBetween(rng, colGap * 0.15, colGap * 0.85);
         const charGap = size * randomBetween(rng, 0.9, 1.28);
         const desiredLetters = Math.max(4, Math.floor(randomBetween(rng, 5, 18)));
         const maxVisibleLetters = Math.max(1, Math.floor((availableHeight - size) / charGap) + 1);
@@ -786,7 +1127,7 @@
         for (let j = 0; j < columnLetters && drawn < count; j++) {
           const y = yStart + j * charGap;
           const fade = j < 2 ? 0.68 + j * 0.16 : 1;
-          drawText(pickChar(chars, rng, drawn), x, y, size * depthScale, slightAngle, alpha * fade, blur);
+          drawText(rainChar(c, j, drawn, rng), x, y, size * depthScale, slightAngle, alpha * fade, blur);
           drawn++;
         }
       }
@@ -794,6 +1135,109 @@
       const gradient = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
       gradient.addColorStop(0, "rgba(0,0,0,0)");
       gradient.addColorStop(1, "rgba(0,0,0,0.38)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawBarrageMode(rng, chars) {
+      const count = effectiveCount(chars);
+      const minSize = Math.min(num("minSize"), num("maxSize"));
+      const maxSize = Math.max(num("minSize"), num("maxSize"));
+      const blurMax = num("blur");
+      const pad = num("padding");
+      const centerX = canvas.width * (num("rainAxis") / 100);
+      const visibleLeft = pad;
+      const visibleRight = canvas.width - pad;
+      const visibleTop = pad;
+      const visibleBottom = canvas.height - pad;
+      const availableWidth = Math.max(80, visibleRight - visibleLeft);
+      const availableHeight = Math.max(80, visibleBottom - visibleTop);
+      let drawn = 0;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.07)";
+      ctx.setLineDash([10, 16]);
+      ctx.beginPath();
+      ctx.moveTo(centerX, 0);
+      ctx.lineTo(centerX, canvas.height);
+      ctx.stroke();
+      ctx.restore();
+
+      if (strictInputCountActive()) {
+        const lines = textLines();
+        let rows = [];
+
+        if (controls.rainLineBreaks.checked) {
+          rows = lines.map((line) => [...line]).filter((line) => line.length);
+        } else {
+          const flat = lines.flat();
+          const rowCount = Math.max(1, Math.min(flat.length, Math.ceil(flat.length / 10), Math.floor(Math.sqrt(flat.length) * 1.15)));
+          rows = Array.from({ length: rowCount }, (_, r) => {
+            const start = Math.floor(r * flat.length / rowCount);
+            const end = Math.floor((r + 1) * flat.length / rowCount);
+            return flat.slice(start, end);
+          }).filter((row) => row.length);
+        }
+
+        const rowGap = availableHeight / Math.max(1, rows.length);
+        const visualIndexes = columnVisualIndexes(rows.length, controls.rainOrder.value, rng);
+        rows.forEach((row, r) => {
+          const baseSize = randomBetween(rng, minSize, maxSize);
+          const blur = Math.pow(rng(), 1.2) * blurMax;
+          const alpha = clamp(1 - blur / Math.max(1, blurMax + 3), 0.12, 1);
+          const visualIndex = visualIndexes[r] ?? r;
+          const y = visibleTop + rowGap * (visualIndex + 0.5) + randomBetween(rng, -rowGap * 0.08, rowGap * 0.08);
+          const fittedGap = row.length > 1 ? Math.min(baseSize * randomBetween(rng, 0.9, 1.18), availableWidth / (row.length - 1)) : baseSize;
+          const renderSize = row.length > 1 ? Math.max(4, Math.min(baseSize, fittedGap * 0.95)) : baseSize;
+          const rowWidth = (row.length - 1) * fittedGap;
+          const centerJitter = randomBetween(rng, -1, 1) * availableWidth * 0.035;
+          const minStart = visibleLeft + renderSize * 0.55;
+          const maxStart = visibleRight - renderSize * 0.55 - rowWidth;
+          const centeredStart = centerX - rowWidth / 2 + centerJitter;
+          const xStart = minStart > maxStart ? minStart : clamp(centeredStart, minStart, maxStart);
+          const slightAngle = randomBetween(rng, -0.025, 0.025);
+          const depthScale = randomBetween(rng, 0.78, 1.08);
+
+          row.forEach((char, i) => {
+            const x = xStart + i * fittedGap;
+            const fade = i < 2 ? 0.68 + i * 0.16 : 1;
+            drawText(char, x, y, renderSize * depthScale, slightAngle, alpha * fade, blur);
+            drawn++;
+          });
+        });
+      }
+
+      const rowCount = Math.max(4, Math.ceil(count / 20), Math.floor(Math.sqrt(count) * 1.15));
+      const rowGap = availableHeight / rowCount;
+      const visualIndexes = columnVisualIndexes(rowCount, controls.rainOrder.value, rng);
+      for (let r = 0; !strictInputCountActive() && r < rowCount && drawn < count; r++) {
+        const size = randomBetween(rng, minSize, maxSize);
+        const blur = Math.pow(rng(), 1.2) * blurMax;
+        const alpha = clamp(1 - blur / Math.max(1, blurMax + 3), 0.12, 1);
+        const visualIndex = visualIndexes[r] ?? r;
+        const y = visibleTop + rowGap * (visualIndex + 0.5) + randomBetween(rng, -rowGap * 0.14, rowGap * 0.14);
+        const charGap = size * randomBetween(rng, 0.9, 1.2);
+        const desiredLetters = Math.max(4, Math.floor(randomBetween(rng, 6, 22)));
+        const maxVisibleLetters = Math.max(1, Math.floor((availableWidth - size) / charGap) + 1);
+        const rowLetters = Math.min(desiredLetters, maxVisibleLetters, count - drawn);
+        const rowWidth = (rowLetters - 1) * charGap;
+        const centerJitter = randomBetween(rng, -1, 1) * availableWidth * 0.08;
+        const centeredStart = centerX - rowWidth / 2 + centerJitter;
+        const xStart = clamp(centeredStart, visibleLeft, Math.max(visibleLeft, visibleRight - rowWidth));
+        const slightAngle = randomBetween(rng, -0.035, 0.035);
+        const depthScale = randomBetween(rng, 0.78, 1.08);
+
+        for (let i = 0; i < rowLetters && drawn < count; i++) {
+          const x = xStart + i * charGap;
+          const fade = i < 2 ? 0.68 + i * 0.16 : 1;
+          drawText(rainChar(r, i, drawn, rng), x, y, size * depthScale, slightAngle, alpha * fade, blur);
+          drawn++;
+        }
+      }
+
+      const gradient = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
+      gradient.addColorStop(0, "rgba(0,0,0,0)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.3)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
@@ -942,9 +1386,7 @@
       const rot = num("rotation") * Math.PI / 180;
       const pad = num("padding");
       const rawPoints = edgePoints.length ? edgePoints : fallbackShapePoints(rng, 900);
-      const points = controls.imageLineBreaks.checked
-        ? [...rawPoints].sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
-        : rawPoints;
+      const points = [...rawPoints].sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
       const count = imageTextLimit(baseCount, Math.min(points.length, 1800));
       const lines = textLines();
       const lineBands = Math.max(1, lines.length);
@@ -979,7 +1421,7 @@
 
       for (let i = 0; i < count; i++) {
         const item = controls.imageLineBreaks.checked ? outlineItems[i % outlineItems.length] : null;
-        const p = item ? item.point : points[Math.floor(rng() * points.length)];
+        const p = item ? item.point : points[i % points.length];
         const jitter = randomBetween(rng, -pad * 0.35, pad * 0.35);
         const x = pad + p.x * (canvas.width - pad * 2) + jitter;
         const y = pad + p.y * (canvas.height - pad * 2) + randomBetween(rng, -pad * 0.35, pad * 0.35);
@@ -1134,6 +1576,7 @@
       const rng = mulberry32(num("seed"));
       const chars = cleanText();
       const mode = controls.mode.value;
+      const isRainLikeMode = mode === "rain" || mode === "barrage";
       const isImageMode = mode === "image" || mode === "imageFill";
       const lineBreakActive = isImageMode && controls.imageLineBreaks.checked;
       const showControl = (id, visible) => {
@@ -1142,26 +1585,37 @@
       };
 
       document.getElementById("axisWrap").style.display = mode === "axis" ? "grid" : "none";
+      document.getElementById("rainOrderWrap").style.display = isRainLikeMode ? "grid" : "none";
+      document.getElementById("rainLineBreakWrap").style.display = isRainLikeMode ? "flex" : "none";
+      document.getElementById("strictInputCountWrap").style.display = "flex";
+      document.getElementById("strictInputOrderWrap").style.display = "flex";
       document.getElementById("imageWrap").style.display = isImageMode ? "grid" : "none";
       document.getElementById("fillDirectionWrap").style.display = mode === "imageFill" ? "grid" : "none";
       document.getElementById("imageLineBreakWrap").style.display = isImageMode ? "flex" : "none";
       document.getElementById("imageRepeatWrap").style.display = isImageMode ? "flex" : "none";
       document.getElementById("imageAlignWrap").style.display = lineBreakActive ? "grid" : "none";
+      document.querySelector("#rainAxisWrap .control-head span:first-child").textContent =
+        mode === "barrage" ? "弹幕竖轴中心" : "雨落横轴中心";
 
-      showControl("countWrap", true);
+      showControl("countWrap", !strictInputCountActive());
       showControl("minSizeWrap", true);
       showControl("maxSizeWrap", mode !== "imageFill");
       showControl("rotationWrap", mode === "axis" || mode === "image");
-      showControl("blurWrap", mode === "axis" || mode === "rain" || mode === "image");
+      showControl("blurWrap", mode === "axis" || isRainLikeMode || mode === "image");
       showControl("spreadWrap", mode === "axis");
       showControl("axisScatterWrap", mode === "axis");
-      showControl("rainAxisWrap", mode === "rain");
+      document.getElementById("axisBoxWrap").style.display = mode === "axis" ? "flex" : "none";
+      showControl("axisBoxChanceWrap", mode === "axis" && controls.axisBox.checked);
+      document.getElementById("axisLineWrap").style.display = mode === "axis" ? "flex" : "none";
+      showControl("axisLineColorWrap", mode === "axis" && controls.axisLine.checked);
+      showControl("rainAxisWrap", isRainLikeMode);
       showControl("imageThresholdWrap", mode === "imageFill");
-      showControl("paddingWrap", mode === "rain" || isImageMode);
+      showControl("paddingWrap", isRainLikeMode || isImageMode);
       showControl("seedWrap", mode !== "imageFill");
 
       if (mode === "axis") drawAxisMode(rng, chars);
       if (mode === "rain") drawRainMode(rng, chars);
+      if (mode === "barrage") drawBarrageMode(rng, chars);
       if (mode === "image") drawImageMode(rng, chars);
       if (mode === "imageFill") drawImageFillMode(chars);
     }
@@ -1184,7 +1638,7 @@
         const el = document.getElementById(`${id}Value`);
         if (!el) return;
         if (id === "count" && controls.count.value === "0") {
-          el.textContent = `输入文字数 (${Math.max(1, cleanText().length)})`;
+          el.textContent = `输入文字数(${Math.max(1, cleanText().length)})`;
           return;
         }
         el.textContent = `${controls[id].value}${valueLabels[id]}`;
@@ -1220,7 +1674,7 @@
 
       document.getElementById("download").addEventListener("click", () => {
         const status = document.getElementById("downloadStatus");
-        status.textContent = "正在生成...";
+          status.textContent = "正在生成...";
         const transparent = controls.transparentExport.checked;
         if (transparent) render(true);
         canvas.toBlob((blob) => {
@@ -1258,11 +1712,15 @@
         }, "image/png");
       });
 
-      document.getElementById("closePreview").addEventListener("click", () => {
-        document.getElementById("exportPreview").hidden = true;
-      });
+      const closePreview = document.getElementById("closePreview");
+      if (closePreview) {
+        closePreview.addEventListener("click", () => {
+          document.getElementById("exportPreview").hidden = true;
+        });
+      }
     }
 
+    repairLabels();
     wireEvents();
     draw();
   </script>
