@@ -135,6 +135,9 @@
       object-fit: contain;
       border: 1px solid #322c25;
       background: #080808;
+      -webkit-touch-callout: default;
+      touch-action: manipulation;
+      user-select: none;
     }
 
     .export-preview-title {
@@ -203,6 +206,13 @@
     .credits strong {
       color: #f4dfb4;
       font-weight: 700;
+    }
+
+    .export-preview-hint {
+      margin: 8px 0 0;
+      color: #b8ad9f;
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     label {
@@ -375,8 +385,10 @@
             <option value="axis">1. 中轴线两端漂浮</option>
             <option value="rain">2. 竖排雨落层次</option>
             <option value="barrage">3. 横排弹幕模式</option>
-            <option value="image">4. 图片轮廓框字</option>
-            <option value="imageFill">5. 图片填充字</option>
+            <option value="tearBlur">4. 泪水模糊</option>
+            <option value="depthFloat">5. 立体漂浮</option>
+            <option value="image">6. 图片轮廓框字</option>
+            <option value="imageFill">7. 图片填充字</option>
           </select>
         </label>
         <label id="axisWrap">
@@ -417,6 +429,13 @@
             <label><input type="radio" name="fillDirection" value="vertical"><span>绔栨帓</span></label>
           </span>
         </label>
+        <label id="floatDirectionWrap">
+          漂浮方向
+          <span class="segmented">
+            <label><input type="radio" name="floatDirection" value="up" checked><span>向上</span></label>
+            <label><input type="radio" name="floatDirection" value="down"><span>向下</span></label>
+          </span>
+        </label>
         <label id="imageAlignWrap">
           鎹㈣瀵归綈
           <span class="segmented segmented-three">
@@ -450,6 +469,14 @@
         <label class="checkbox-row">
           <input id="transparentExport" type="checkbox" />
           <span>涓嬭浇鏃朵娇鐢ㄩ€忔槑鑳屾櫙</span>
+        </label>
+        <label class="checkbox-row" id="glitchWrap">
+          <input id="glitch" type="checkbox" />
+          <span>叠加故障效果</span>
+        </label>
+        <label id="glitchAmountWrap">
+          <span class="control-head"><span>故障强度</span><span class="value" id="glitchAmountValue"></span></span>
+          <input id="glitchAmount" type="range" min="0" max="100" value="35" />
         </label>
         <label>
           瀛椾綋
@@ -485,6 +512,30 @@
         <label id="blurWrap">
           <span class="control-head"><span>随机模糊</span><span class="value" id="blurValue"></span></span>
           <input id="blur" type="range" min="0" max="18" value="3" />
+        </label>
+        <label id="tearLetterSpacingWrap">
+          <span class="control-head"><span>泪水字间距</span><span class="value" id="tearLetterSpacingValue"></span></span>
+          <input id="tearLetterSpacing" type="range" min="-8" max="80" value="8" />
+        </label>
+        <label id="tearLineSpacingWrap">
+          <span class="control-head"><span>泪水行间距</span><span class="value" id="tearLineSpacingValue"></span></span>
+          <input id="tearLineSpacing" type="range" min="70" max="220" value="115" />
+        </label>
+        <label id="tearBlurRadiusWrap">
+          <span class="control-head"><span>圆形模糊大小</span><span class="value" id="tearBlurRadiusValue"></span></span>
+          <input id="tearBlurRadius" type="range" min="20" max="280" value="110" />
+        </label>
+        <label id="depthXRotationWrap">
+          <span class="control-head"><span>随机 X 轴旋转</span><span class="value" id="depthXRotationValue"></span></span>
+          <input id="depthXRotation" type="range" min="0" max="85" value="45" />
+        </label>
+        <label id="depthYRotationWrap">
+          <span class="control-head"><span>随机 Y 轴旋转</span><span class="value" id="depthYRotationValue"></span></span>
+          <input id="depthYRotation" type="range" min="0" max="85" value="35" />
+        </label>
+        <label id="depthZRotationWrap">
+          <span class="control-head"><span>随机 Z 轴旋转</span><span class="value" id="depthZRotationValue"></span></span>
+          <input id="depthZRotation" type="range" min="0" max="360" value="90" />
         </label>
         <label id="spreadWrap">
           <span class="control-head"><span>分散程度</span><span class="value" id="spreadValue"></span></span>
@@ -565,10 +616,11 @@
       </div>
       <div class="export-preview" id="exportPreview" hidden>
         <div class="export-preview-title">
-          <span>PNG 已生成，右键图片可保存</span>
+          <span>PNG 已生成，右键或长按图片可保存</span>
           <button id="closePreview">关闭</button>
         </div>
         <img id="exportImage" alt="鐢熸垚鐨勬枃瀛楁帓鐗?PNG 棰勮" />
+        <p class="export-preview-hint">移动端长按预览图可保存；如果浏览器拦截，使用下方保存按钮。</p>
         <div class="export-preview-actions">
           <a id="openImage" href="#" target="_blank" rel="noopener">鎵撳紑鍥剧墖</a>
           <a id="saveImage" href="#" download="text-layout.png">淇濆瓨 PNG</a>
@@ -584,7 +636,8 @@
     const ids = [
       "textInput", "mode", "bgColor", "fontColor", "fontFamily", "count",
       "minSize", "maxSize", "rotation", "blur", "spread", "padding", "axisBox", "axisBoxChance", "axisLine", "axisLineColor",
-      "seed", "canvasW", "canvasH", "imageInput", "transparentExport", "axisScatter", "rainAxis", "imageThreshold",
+      "tearLetterSpacing", "tearLineSpacing", "tearBlurRadius", "depthXRotation", "depthYRotation", "depthZRotation",
+      "seed", "canvasW", "canvasH", "imageInput", "transparentExport", "glitch", "glitchAmount", "axisScatter", "rainAxis", "imageThreshold",
       "imageLineBreaks", "imageRepeatFill", "rainOrder", "rainLineBreaks", "strictInputCount", "strictInputOrder"
     ];
 
@@ -621,6 +674,7 @@
       setLeadingText("#rainOrderWrap", "雨落文字顺序");
       setLeadingText("#imageWrap", "上传图片");
       setLeadingText("#fillDirectionWrap", "填充方向");
+      setLeadingText("#floatDirectionWrap", "立体漂浮方向");
       setLeadingText("#imageAlignWrap", "换行对齐");
       setLeadingText('label:has(#bgColor)', "背景颜色");
       setLeadingText('label:has(#fontColor)', "字体颜色");
@@ -629,15 +683,19 @@
       setLeadingText('label:has(#canvasH)', "高度");
       setLeadingText("#axisLineColorWrap", "连线颜色");
       [
-        ["#mode option[value='axis']", "1. 中轴线两端漂浮"],
-        ["#mode option[value='rain']", "2. 竖排雨落层次"],
-        ["#mode option[value='barrage']", "3. 横排弹幕模式"],
-        ["#mode option[value='image']", "4. 图片轮廓框字"],
-        ["#mode option[value='imageFill']", "5. 图片填充字"],
+      ["#mode option[value='axis']", "1. 中轴线两端漂浮"],
+      ["#mode option[value='rain']", "2. 竖排雨落层次"],
+      ["#mode option[value='barrage']", "3. 横排弹幕模式"],
+      ["#mode option[value='tearBlur']", "4. 泪水模糊"],
+      ["#mode option[value='depthFloat']", "5. 立体漂浮"],
+      ["#mode option[value='image']", "6. 图片轮廓框字"],
+      ["#mode option[value='imageFill']", "7. 图片填充字"],
         ["input[name='axis'][value='vertical'] + span", "竖轴"],
         ["input[name='axis'][value='horizontal'] + span", "横轴"],
-        ["input[name='fillDirection'][value='horizontal'] + span", "横排"],
-        ["input[name='fillDirection'][value='vertical'] + span", "竖排"],
+      ["input[name='fillDirection'][value='horizontal'] + span", "横排"],
+      ["input[name='fillDirection'][value='vertical'] + span", "竖排"],
+      ["input[name='floatDirection'][value='up'] + span", "向上"],
+      ["input[name='floatDirection'][value='down'] + span", "向下"],
         ["input[name='imageAlign'][value='left'] + span", "居左"],
         ["input[name='imageAlign'][value='center'] + span", "居中"],
         ["input[name='imageAlign'][value='right'] + span", "居右"],
@@ -649,7 +707,9 @@
         ["#rainLineBreakWrap span", "按输入换行分配雨列"],
         ["#imageLineBreakWrap span", "应用输入文字换行"],
         ["#imageRepeatWrap span", "重复文字以填满图形"],
-        ["label:has(#transparentExport) span", "下载时使用透明背景"],
+      ["label:has(#transparentExport) span", "下载时使用透明背景"],
+      ["#glitchWrap span", "叠加故障效果"],
+      ["#glitchAmountWrap .control-head span:first-child", "故障强度"],
         ["#axisBoxWrap span", "清晰字随机添加色块"],
         ["#axisLineWrap span", "启动连线"],
         ["#countWrap .control-head span:first-child", "文字数量"],
@@ -657,6 +717,12 @@
         ["#maxSizeWrap .control-head span:first-child", "最大字号"],
         ["#rotationWrap .control-head span:first-child", "旋转幅度"],
         ["#blurWrap .control-head span:first-child", "随机模糊"],
+        ["#tearLetterSpacingWrap .control-head span:first-child", "泪水字间距"],
+        ["#tearLineSpacingWrap .control-head span:first-child", "泪水行间距"],
+        ["#tearBlurRadiusWrap .control-head span:first-child", "圆形模糊大小"],
+        ["#depthXRotationWrap .control-head span:first-child", "随机 X 轴旋转"],
+        ["#depthYRotationWrap .control-head span:first-child", "随机 Y 轴旋转"],
+        ["#depthZRotationWrap .control-head span:first-child", "随机 Z 轴旋转"],
         ["#spreadWrap .control-head span:first-child", "分散程度"],
         ["#axisScatterWrap .control-head span:first-child", "上下分散程度"],
         ["#axisBoxChanceWrap .control-head span:first-child", "色块比例"],
@@ -666,7 +732,8 @@
         ["#seedWrap .control-head span:first-child", "随机种子"],
         ["#randomize", "随机生成"],
         ["#download", "下载 PNG"],
-        [".export-preview-title span", "PNG 已生成，右键图片可保存"],
+        [".export-preview-title span", "PNG 已生成，右键或长按图片可保存"],
+        [".export-preview-hint", "移动端长按预览图可保存；如果浏览器拦截，使用下方保存按钮。"],
         ["#closePreview", "关闭"],
         ["#openImage", "打开图片"],
         ["#saveImage", "保存 PNG"]
@@ -702,9 +769,16 @@
       maxSize: "px",
       rotation: "deg",
       blur: "px",
+      tearLetterSpacing: "px",
+      tearLineSpacing: "%",
+      tearBlurRadius: "px",
+      depthXRotation: "deg",
+      depthYRotation: "deg",
+      depthZRotation: "deg",
       spread: "%",
       axisScatter: "%",
       axisBoxChance: "%",
+      glitchAmount: "%",
       rainAxis: "%",
       imageThreshold: "",
       padding: "px",
@@ -715,6 +789,7 @@
     let edgePoints = [];
     let maskCache = null;
     let currentExportUrl = "";
+    let currentExportName = "text-layout.png";
     let drawQueued = false;
 
     function mulberry32(seed) {
@@ -808,6 +883,10 @@
 
     function selectedFillDirection() {
       return document.querySelector("input[name='fillDirection']:checked").value;
+    }
+
+    function selectedFloatDirection() {
+      return document.querySelector("input[name='floatDirection']:checked").value;
     }
 
     function selectedImageAlign() {
@@ -927,6 +1006,42 @@
       ctx.textBaseline = "middle";
       ctx.fillText(char, 0, 0);
       ctx.restore();
+    }
+
+    function drawDepthText(char, x, y, size, zAngle, scaleX, scaleY, alpha, blur) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(zAngle);
+      ctx.scale(scaleX, scaleY);
+      ctx.globalAlpha = alpha;
+      ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
+      ctx.fillStyle = controls.fontColor.value;
+      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      ctx.font = `${weight} ${Math.max(4, size)}px ${fontStack()}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+    }
+
+    function drawString(text, x, y, size, align = "center", alpha = 1, blur = 0, color = controls.fontColor.value) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
+      ctx.fillStyle = color;
+      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      ctx.font = `${weight} ${Math.max(4, size)}px ${fontStack()}`;
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    function sourceLines() {
+      const raw = controls.textInput.value.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+      if (raw.length) return raw;
+      const text = cleanText().join("").trim();
+      return text ? [text] : ["字"];
     }
 
     function centeredContinuousGroups(groups, count) {
@@ -1240,6 +1355,158 @@
       gradient.addColorStop(1, "rgba(0,0,0,0.3)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawTearBlurMode(rng, chars) {
+      const lines = sourceLines();
+      const minSize = Math.min(num("minSize"), num("maxSize"));
+      const maxSize = Math.max(num("minSize"), num("maxSize"));
+      const blurMax = Math.max(1, num("blur"));
+      const spread = num("spread") / 100;
+      const pad = num("padding");
+      const baseSize = clamp((minSize + maxSize) * 0.55, 18, 160);
+      const letterSpacing = num("tearLetterSpacing");
+      const lineGap = baseSize * (num("tearLineSpacing") / 100);
+      const startY = canvas.height / 2 - ((lines.length - 1) * lineGap) / 2;
+      const blurRadius = num("tearBlurRadius");
+      const off = document.createElement("canvas");
+      off.width = canvas.width;
+      off.height = canvas.height;
+      const octx = off.getContext("2d");
+      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      const font = `${weight} ${baseSize}px ${fontStack()}`;
+      const textBounds = [];
+
+      const drawSpacedLine = (targetCtx, line, x, y, alpha = 1) => {
+        targetCtx.save();
+        targetCtx.globalAlpha = alpha;
+        targetCtx.fillStyle = controls.fontColor.value;
+        targetCtx.font = font;
+        targetCtx.textAlign = "left";
+        targetCtx.textBaseline = "middle";
+        [...line].forEach((char) => {
+          targetCtx.fillText(char, x, y);
+          x += targetCtx.measureText(char).width + letterSpacing;
+        });
+        targetCtx.restore();
+      };
+
+      const measureLine = (line) => {
+        ctx.save();
+        ctx.font = font;
+        const width = [...line].reduce((sum, char, index) => {
+          return sum + ctx.measureText(char).width + (index < line.length - 1 ? letterSpacing : 0);
+        }, 0);
+        ctx.restore();
+        return width;
+      };
+
+      lines.forEach((line, lineIndex) => {
+        const y = startY + lineIndex * lineGap;
+        const measured = measureLine(line);
+        const maxWidth = canvas.width - pad * 2;
+        const scale = measured > maxWidth ? maxWidth / measured : 1;
+        const x0 = canvas.width / 2 - (measured * scale) / 2;
+        ctx.save();
+        ctx.translate(x0, y);
+        ctx.scale(scale, scale);
+        drawSpacedLine(ctx, line, 0, 0, 0.92);
+        ctx.restore();
+        octx.save();
+        octx.translate(x0, y);
+        octx.scale(scale, scale);
+        drawSpacedLine(octx, line, 0, 0, 1);
+        octx.restore();
+        textBounds.push({ x: x0, y: y - baseSize * scale * 0.6, w: measured * scale, h: baseSize * scale * 1.2 });
+      });
+
+      const union = textBounds.reduce((box, b) => ({
+        x: Math.min(box.x, b.x),
+        y: Math.min(box.y, b.y),
+        r: Math.max(box.r, b.x + b.w),
+        b: Math.max(box.b, b.y + b.h)
+      }), { x: canvas.width, y: canvas.height, r: 0, b: 0 });
+      const circles = Math.max(2, Math.round(2 + spread * 7));
+      for (let i = 0; i < circles; i++) {
+        const cx = randomBetween(rng, union.x, union.r);
+        const cy = randomBetween(rng, union.y, union.b);
+        const radius = blurRadius * randomBetween(rng, 0.55, 1.25);
+        const patch = document.createElement("canvas");
+        patch.width = canvas.width;
+        patch.height = canvas.height;
+        const pctx = patch.getContext("2d");
+        pctx.filter = `blur(${blurMax.toFixed(2)}px)`;
+        pctx.drawImage(off, 0, 0);
+        pctx.filter = "none";
+        pctx.globalCompositeOperation = "destination-in";
+        const gradient = pctx.createRadialGradient(cx, cy, radius * 0.28, cx, cy, radius);
+        gradient.addColorStop(0, `rgba(0,0,0,${randomBetween(rng, 0.62, 0.92).toFixed(3)})`);
+        gradient.addColorStop(0.58, "rgba(0,0,0,0.48)");
+        gradient.addColorStop(1, "rgba(0,0,0,0)");
+        pctx.fillStyle = gradient;
+        pctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+        ctx.drawImage(patch, 0, 0);
+      }
+    }
+
+    function drawDepthFloatMode(rng, chars) {
+      const count = effectiveCount(chars);
+      const minSize = Math.min(num("minSize"), num("maxSize"));
+      const maxSize = Math.max(num("minSize"), num("maxSize"));
+      const blurMax = num("blur");
+      const spread = num("spread") / 100;
+      const xRot = num("depthXRotation") * Math.PI / 180;
+      const yRot = num("depthYRotation") * Math.PI / 180;
+      const zRot = num("depthZRotation") * Math.PI / 180;
+      const direction = selectedFloatDirection() === "up" ? -1 : 1;
+      const centerY = canvas.height * (direction < 0 ? 0.58 : 0.42);
+      const items = [];
+
+      for (let i = 0; i < count; i++) {
+        const progress = count <= 1 ? 0 : i / (count - 1);
+        const depth = Math.pow(rng(), 1.8);
+        const size = randomBetween(rng, minSize, maxSize) * (0.45 + depth * 1.5);
+        const x = canvas.width / 2 + randomBetween(rng, -canvas.width * 0.42, canvas.width * 0.42) * spread;
+        const y = centerY + direction * randomBetween(rng, canvas.height * 0.04, canvas.height * 0.42) * spread + (progress - 0.5) * canvas.height * 0.16;
+        const blur = (1 - depth) * blurMax * 2.2;
+        const alpha = clamp(0.16 + depth * 0.85, 0.12, 1);
+        const tiltX = randomBetween(rng, -xRot, xRot);
+        const tiltY = randomBetween(rng, -yRot, yRot);
+        const zAngle = randomBetween(rng, -zRot, zRot);
+        const scaleX = clamp(Math.cos(tiltY), 0.18, 1);
+        const scaleY = clamp(Math.cos(tiltX), 0.18, 1);
+        items.push({ char: chars.length ? chars[i % chars.length] : "字", x, y, size, blur, alpha, zAngle, scaleX, scaleY, depth });
+      }
+
+      items.sort((a, b) => a.depth - b.depth).forEach((item) => {
+        drawDepthText(item.char, item.x, item.y, item.size, item.zAngle, item.scaleX, item.scaleY, item.alpha, item.blur);
+      });
+    }
+
+    function applyGlitchEffect(rng) {
+      if (!controls.glitch.checked || num("glitchAmount") <= 0) return;
+      const amount = num("glitchAmount") / 100;
+      const copy = document.createElement("canvas");
+      copy.width = canvas.width;
+      copy.height = canvas.height;
+      const cctx = copy.getContext("2d");
+      cctx.drawImage(canvas, 0, 0);
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      const slices = Math.floor(12 + amount * 44);
+      for (let i = 0; i < slices; i++) {
+        const h = randomBetween(rng, 1, 10 + amount * 26);
+        const y = rng() * canvas.height;
+        const shift = randomBetween(rng, -canvas.width, canvas.width) * amount * 0.07;
+        ctx.globalAlpha = randomBetween(rng, 0.28, 0.9);
+        ctx.drawImage(copy, 0, y, canvas.width, h, shift, y, canvas.width, h);
+      }
+      ctx.globalAlpha = amount * 0.45;
+      ctx.globalCompositeOperation = "screen";
+      ctx.drawImage(copy, amount * 12, 0);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.drawImage(copy, -amount * 10, 0);
+      ctx.restore();
     }
 
     function extractEdges(img) {
@@ -1578,6 +1845,7 @@
       const mode = controls.mode.value;
       const isRainLikeMode = mode === "rain" || mode === "barrage";
       const isImageMode = mode === "image" || mode === "imageFill";
+      const isSoftEffectMode = mode === "tearBlur" || mode === "depthFloat";
       const lineBreakActive = isImageMode && controls.imageLineBreaks.checked;
       const showControl = (id, visible) => {
         const el = document.getElementById(id);
@@ -1591,6 +1859,7 @@
       document.getElementById("strictInputOrderWrap").style.display = "flex";
       document.getElementById("imageWrap").style.display = isImageMode ? "grid" : "none";
       document.getElementById("fillDirectionWrap").style.display = mode === "imageFill" ? "grid" : "none";
+      document.getElementById("floatDirectionWrap").style.display = mode === "depthFloat" ? "grid" : "none";
       document.getElementById("imageLineBreakWrap").style.display = isImageMode ? "flex" : "none";
       document.getElementById("imageRepeatWrap").style.display = isImageMode ? "flex" : "none";
       document.getElementById("imageAlignWrap").style.display = lineBreakActive ? "grid" : "none";
@@ -1601,8 +1870,14 @@
       showControl("minSizeWrap", true);
       showControl("maxSizeWrap", mode !== "imageFill");
       showControl("rotationWrap", mode === "axis" || mode === "image");
-      showControl("blurWrap", mode === "axis" || isRainLikeMode || mode === "image");
-      showControl("spreadWrap", mode === "axis");
+      showControl("blurWrap", mode === "axis" || isRainLikeMode || mode === "image" || isSoftEffectMode);
+      showControl("tearLetterSpacingWrap", mode === "tearBlur");
+      showControl("tearLineSpacingWrap", mode === "tearBlur");
+      showControl("tearBlurRadiusWrap", mode === "tearBlur");
+      showControl("depthXRotationWrap", mode === "depthFloat");
+      showControl("depthYRotationWrap", mode === "depthFloat");
+      showControl("depthZRotationWrap", mode === "depthFloat");
+      showControl("spreadWrap", mode === "axis" || isSoftEffectMode);
       showControl("axisScatterWrap", mode === "axis");
       document.getElementById("axisBoxWrap").style.display = mode === "axis" ? "flex" : "none";
       showControl("axisBoxChanceWrap", mode === "axis" && controls.axisBox.checked);
@@ -1610,14 +1885,19 @@
       showControl("axisLineColorWrap", mode === "axis" && controls.axisLine.checked);
       showControl("rainAxisWrap", isRainLikeMode);
       showControl("imageThresholdWrap", mode === "imageFill");
-      showControl("paddingWrap", isRainLikeMode || isImageMode);
+      showControl("paddingWrap", isRainLikeMode || isImageMode || mode === "tearBlur");
       showControl("seedWrap", mode !== "imageFill");
+      document.getElementById("glitchWrap").style.display = "flex";
+      showControl("glitchAmountWrap", controls.glitch.checked);
 
       if (mode === "axis") drawAxisMode(rng, chars);
       if (mode === "rain") drawRainMode(rng, chars);
       if (mode === "barrage") drawBarrageMode(rng, chars);
+      if (mode === "tearBlur") drawTearBlurMode(rng, chars);
+      if (mode === "depthFloat") drawDepthFloatMode(rng, chars);
       if (mode === "image") drawImageMode(rng, chars);
       if (mode === "imageFill") drawImageFillMode(chars);
+      applyGlitchEffect(rng);
     }
 
     function draw() {
@@ -1651,6 +1931,7 @@
       });
       document.querySelectorAll("input[name='axis']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='fillDirection']").forEach((el) => el.addEventListener("change", queueDraw));
+      document.querySelectorAll("input[name='floatDirection']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='imageAlign']").forEach((el) => el.addEventListener("change", queueDraw));
 
       controls.imageInput.addEventListener("change", (event) => {
@@ -1695,6 +1976,7 @@
           link.remove();
 
           const fileName = `text-layout-${controls.mode.value}-${suffix}.png`;
+          currentExportName = fileName;
           const preview = document.getElementById("exportPreview");
           const image = document.getElementById("exportImage");
           const openImage = document.getElementById("openImage");
@@ -1716,6 +1998,36 @@
       if (closePreview) {
         closePreview.addEventListener("click", () => {
           document.getElementById("exportPreview").hidden = true;
+        });
+      }
+
+      const exportImage = document.getElementById("exportImage");
+      if (exportImage) {
+        let longPressTimer = 0;
+        const clearLongPress = () => {
+          if (longPressTimer) window.clearTimeout(longPressTimer);
+          longPressTimer = 0;
+        };
+        const saveCurrentExport = () => {
+          if (!currentExportUrl) return;
+          const link = document.createElement("a");
+          link.href = currentExportUrl;
+          link.download = currentExportName;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          const status = document.getElementById("downloadStatus");
+          status.textContent = "已触发长按保存";
+          window.setTimeout(() => {
+            if (status.textContent === "已触发长按保存") status.textContent = "";
+          }, 1800);
+        };
+        exportImage.addEventListener("touchstart", () => {
+          clearLongPress();
+          longPressTimer = window.setTimeout(saveCurrentExport, 700);
+        }, { passive: true });
+        ["touchend", "touchcancel", "touchmove"].forEach((eventName) => {
+          exportImage.addEventListener(eventName, clearLongPress, { passive: true });
         });
       }
     }
