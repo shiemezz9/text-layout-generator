@@ -1369,10 +1369,10 @@
       const lineGap = baseSize * (num("tearLineSpacing") / 100);
       const startY = canvas.height / 2 - ((lines.length - 1) * lineGap) / 2;
       const blurRadius = num("tearBlurRadius");
-      const off = document.createElement("canvas");
-      off.width = canvas.width;
-      off.height = canvas.height;
-      const octx = off.getContext("2d");
+      const baseLayer = document.createElement("canvas");
+      baseLayer.width = canvas.width;
+      baseLayer.height = canvas.height;
+      const bctx = baseLayer.getContext("2d");
       const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
       const font = `${weight} ${baseSize}px ${fontStack()}`;
       const textBounds = [];
@@ -1407,16 +1407,11 @@
         const maxWidth = canvas.width - pad * 2;
         const scale = measured > maxWidth ? maxWidth / measured : 1;
         const x0 = canvas.width / 2 - (measured * scale) / 2;
-        ctx.save();
-        ctx.translate(x0, y);
-        ctx.scale(scale, scale);
-        drawSpacedLine(ctx, line, 0, 0, 0.92);
-        ctx.restore();
-        octx.save();
-        octx.translate(x0, y);
-        octx.scale(scale, scale);
-        drawSpacedLine(octx, line, 0, 0, 1);
-        octx.restore();
+        bctx.save();
+        bctx.translate(x0, y);
+        bctx.scale(scale, scale);
+        drawSpacedLine(bctx, line, 0, 0, 0.92);
+        bctx.restore();
         textBounds.push({ x: x0, y: y - baseSize * scale * 0.6, w: measured * scale, h: baseSize * scale * 1.2 });
       });
 
@@ -1427,26 +1422,42 @@
         b: Math.max(box.b, b.y + b.h)
       }), { x: canvas.width, y: canvas.height, r: 0, b: 0 });
       const circles = Math.max(2, Math.round(2 + spread * 7));
+      const mask = document.createElement("canvas");
+      mask.width = canvas.width;
+      mask.height = canvas.height;
+      const mctx = mask.getContext("2d");
       for (let i = 0; i < circles; i++) {
         const cx = randomBetween(rng, union.x, union.r);
         const cy = randomBetween(rng, union.y, union.b);
         const radius = blurRadius * randomBetween(rng, 0.55, 1.25);
-        const patch = document.createElement("canvas");
-        patch.width = canvas.width;
-        patch.height = canvas.height;
-        const pctx = patch.getContext("2d");
-        pctx.filter = `blur(${blurMax.toFixed(2)}px)`;
-        pctx.drawImage(off, 0, 0);
-        pctx.filter = "none";
-        pctx.globalCompositeOperation = "destination-in";
-        const gradient = pctx.createRadialGradient(cx, cy, radius * 0.28, cx, cy, radius);
-        gradient.addColorStop(0, `rgba(0,0,0,${randomBetween(rng, 0.62, 0.92).toFixed(3)})`);
-        gradient.addColorStop(0.58, "rgba(0,0,0,0.48)");
+        const gradient = mctx.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius);
+        gradient.addColorStop(0, "rgba(0,0,0,1)");
+        gradient.addColorStop(0.52, "rgba(0,0,0,0.96)");
         gradient.addColorStop(1, "rgba(0,0,0,0)");
-        pctx.fillStyle = gradient;
-        pctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-        ctx.drawImage(patch, 0, 0);
+        mctx.fillStyle = gradient;
+        mctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
       }
+
+      const sharpLayer = document.createElement("canvas");
+      sharpLayer.width = canvas.width;
+      sharpLayer.height = canvas.height;
+      const sctx = sharpLayer.getContext("2d");
+      sctx.drawImage(baseLayer, 0, 0);
+      sctx.globalCompositeOperation = "destination-out";
+      sctx.drawImage(mask, 0, 0);
+
+      const blurLayer = document.createElement("canvas");
+      blurLayer.width = canvas.width;
+      blurLayer.height = canvas.height;
+      const blctx = blurLayer.getContext("2d");
+      blctx.filter = `blur(${blurMax.toFixed(2)}px)`;
+      blctx.drawImage(baseLayer, 0, 0);
+      blctx.filter = "none";
+      blctx.globalCompositeOperation = "destination-in";
+      blctx.drawImage(mask, 0, 0);
+
+      ctx.drawImage(sharpLayer, 0, 0);
+      ctx.drawImage(blurLayer, 0, 0);
     }
 
     function drawDepthFloatMode(rng, chars) {
@@ -1928,6 +1939,7 @@
     function wireEvents() {
       document.querySelectorAll("input, select, textarea").forEach((el) => {
         if (el.type !== "file") el.addEventListener("input", queueDraw);
+        if (el.tagName === "SELECT") el.addEventListener("change", queueDraw);
       });
       document.querySelectorAll("input[name='axis']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='fillDirection']").forEach((el) => el.addEventListener("change", queueDraw));
