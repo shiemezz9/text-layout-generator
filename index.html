@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
@@ -1621,6 +1621,35 @@
       return mask.mask[y * mask.width + x] === 1;
     }
 
+    function extractMaskEdges(mask) {
+      if (!mask) return [];
+      const points = [];
+      const step = Math.max(1, Math.floor(Math.max(mask.width, mask.height) / 260));
+      const isInside = (x, y) => {
+        if (x < 0 || y < 0 || x >= mask.width || y >= mask.height) return false;
+        return mask.mask[y * mask.width + x] === 1;
+      };
+
+      for (let y = 1; y < mask.height - 1; y += step) {
+        for (let x = 1; x < mask.width - 1; x += step) {
+          if (!isInside(x, y)) continue;
+          const edgeScore =
+            (isInside(x - 1, y) ? 0 : 1) +
+            (isInside(x + 1, y) ? 0 : 1) +
+            (isInside(x, y - 1) ? 0 : 1) +
+            (isInside(x, y + 1) ? 0 : 1);
+          if (edgeScore > 0) {
+            points.push({
+              x: x / Math.max(1, mask.width - 1),
+              y: y / Math.max(1, mask.height - 1),
+              strength: clamp(0.46 + edgeScore * 0.14, 0.45, 1)
+            });
+          }
+        }
+      }
+      return points;
+    }
+
     function drawFallbackFill(chars) {
       const size = num("minSize");
       const direction = selectedFillDirection();
@@ -1663,7 +1692,8 @@
       const blurMax = num("blur");
       const rot = num("rotation") * Math.PI / 180;
       const pad = num("padding");
-      const rawPoints = edgePoints.length ? edgePoints : fallbackShapePoints(rng, 900);
+      const maskPoints = extractMaskEdges(currentMask());
+      const rawPoints = maskPoints.length ? maskPoints : edgePoints.length ? edgePoints : fallbackShapePoints(rng, 900);
       const points = [...rawPoints].sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
       const count = imageTextLimit(baseCount, Math.min(points.length, 1800));
       const lines = textLines();
@@ -1895,7 +1925,7 @@
       document.getElementById("axisLineWrap").style.display = mode === "axis" ? "flex" : "none";
       showControl("axisLineColorWrap", mode === "axis" && controls.axisLine.checked);
       showControl("rainAxisWrap", isRainLikeMode);
-      showControl("imageThresholdWrap", mode === "imageFill");
+      showControl("imageThresholdWrap", isImageMode);
       showControl("paddingWrap", isRainLikeMode || isImageMode || mode === "tearBlur");
       showControl("seedWrap", mode !== "imageFill");
       document.getElementById("glitchWrap").style.display = "flex";
