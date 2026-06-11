@@ -609,6 +609,7 @@
           <span class="download-status" id="downloadStatus" aria-live="polite"></span>
           <button id="randomize">闅忔満鐢熸垚</button>
           <button id="download">涓嬭浇 PNG</button>
+          <button id="copyHtml">复制 HTML</button>
         </div>
       </header>
       <div class="canvas-shell">
@@ -732,6 +733,7 @@
         ["#seedWrap .control-head span:first-child", "随机种子"],
         ["#randomize", "随机生成"],
         ["#download", "下载 PNG"],
+        ["#copyHtml", "复制 HTML"],
         [".export-preview-title span", "PNG 已生成，右键或长按图片可保存"],
         [".export-preview-hint", "移动端长按预览图可保存；如果浏览器拦截，使用下方保存按钮。"],
         ["#closePreview", "关闭"],
@@ -793,6 +795,8 @@
     let drawQueued = false;
     let outputScale = 1;
     let renderGuides = true;
+    let htmlItems = [];
+    let htmlLines = [];
 
     function mulberry32(seed) {
       return function random() {
@@ -980,6 +984,86 @@
       return controls.fontFamily.value;
     }
 
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function cssNumber(value, digits = 2) {
+      return Number(value).toFixed(digits).replace(/\.?0+$/, "");
+    }
+
+    function recordHtmlItem(item) {
+      if (outputScale !== 1) return;
+      htmlItems.push(item);
+    }
+
+    function htmlTransform(item) {
+      const scale = item.scaleX !== 1 || item.scaleY !== 1
+        ? ` scale(${cssNumber(item.scaleX || 1, 3)}, ${cssNumber(item.scaleY || 1, 3)})`
+        : "";
+      return `translate(-50%, -50%) rotate(${cssNumber(item.angle || 0, 4)}rad)${scale}`;
+    }
+
+    function buildHtmlCode() {
+      const width = canvas.width;
+      const height = canvas.height;
+      const font = fontStack();
+      const bg = controls.transparentExport.checked ? "transparent" : controls.bgColor.value;
+      const fontColor = controls.fontColor.value;
+      const items = htmlItems.map((item) => {
+        const filter = item.blur > 0 ? `filter: blur(${cssNumber(item.blur)}px);` : "";
+        const common = [
+          "position: absolute",
+          `left: ${cssNumber(item.x)}px`,
+          `top: ${cssNumber(item.y)}px`,
+          `transform: ${htmlTransform(item)}`,
+          "transform-origin: center",
+          `font: ${item.weight} ${cssNumber(item.size)}px ${font}`,
+          "line-height: 1",
+          "white-space: pre",
+          `opacity: ${cssNumber(item.alpha, 3)}`,
+          filter
+        ].filter(Boolean).join("; ");
+
+        if (item.boxed) {
+          return `  <span style="${common}; display: inline-grid; place-items: center; width: ${cssNumber(item.boxW)}px; height: ${cssNumber(item.boxH)}px; background: ${fontColor}; color: ${bg === "transparent" ? controls.bgColor.value : bg};">${escapeHtml(item.text)}</span>`;
+        }
+        return `  <span style="${common}; color: ${item.color || fontColor};">${escapeHtml(item.text)}</span>`;
+      }).join("\n");
+      const lines = htmlLines.length
+        ? `  <svg style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none;" viewBox="0 0 ${width} ${height}">\n${htmlLines.map((line) => `    <polyline points="${line.points.map((point) => `${cssNumber(point.x)},${cssNumber(point.y)}`).join(" ")}" fill="none" stroke="${line.color}" stroke-opacity="${cssNumber(line.alpha, 3)}" stroke-width="${cssNumber(line.width)}" stroke-linecap="round" stroke-linejoin="round" />`).join("\n")}\n  </svg>\n`
+        : "";
+
+      return `<div class="text-layout-export" style="position: relative; width: ${width}px; height: ${height}px; overflow: hidden; background: ${bg}; font-family: ${font};">\n${lines}${items}\n</div>`;
+    }
+
+    async function copyGeneratedHtml() {
+      draw();
+      const status = document.getElementById("downloadStatus");
+      const html = buildHtmlCode();
+      try {
+        await navigator.clipboard.writeText(html);
+        status.textContent = "已复制 HTML";
+      } catch (error) {
+        const box = document.createElement("textarea");
+        box.value = html;
+        box.style.position = "fixed";
+        box.style.left = "-9999px";
+        document.body.appendChild(box);
+        box.select();
+        document.execCommand("copy");
+        box.remove();
+        status.textContent = "已复制 HTML";
+      }
+      window.setTimeout(() => {
+        if (status.textContent === "已复制 HTML") status.textContent = "";
+      }, 2200);
+    }
+
     function drawText(char, x, y, size, angle, alpha, blur) {
       ctx.save();
       ctx.translate(x, y);
@@ -993,6 +1077,19 @@
       ctx.textBaseline = "middle";
       ctx.fillText(char, 0, 0);
       ctx.restore();
+      recordHtmlItem({
+        text: char,
+        x,
+        y,
+        size: Math.max(4, size),
+        angle,
+        alpha,
+        blur,
+        scaleX: 1,
+        scaleY: 1,
+        weight,
+        color: controls.fontColor.value
+      });
     }
 
     function drawBoxedText(char, x, y, size, angle, alpha) {
@@ -1014,6 +1111,21 @@
       ctx.textBaseline = "middle";
       ctx.fillText(char, 0, 0);
       ctx.restore();
+      recordHtmlItem({
+        text: char,
+        x,
+        y,
+        size: fontSize,
+        angle,
+        alpha,
+        blur: 0,
+        scaleX: 1,
+        scaleY: 1,
+        weight,
+        boxed: true,
+        boxW,
+        boxH
+      });
     }
 
     function drawDepthText(char, x, y, size, zAngle, scaleX, scaleY, alpha, blur) {
@@ -1030,6 +1142,19 @@
       ctx.textBaseline = "middle";
       ctx.fillText(char, 0, 0);
       ctx.restore();
+      recordHtmlItem({
+        text: char,
+        x,
+        y,
+        size: Math.max(4, size),
+        angle: zAngle,
+        alpha,
+        blur,
+        scaleX,
+        scaleY,
+        weight,
+        color: controls.fontColor.value
+      });
     }
 
     function drawString(text, x, y, size, align = "center", alpha = 1, blur = 0, color = controls.fontColor.value) {
@@ -1137,7 +1262,8 @@
         ctx.save();
         ctx.strokeStyle = controls.axisLineColor.value;
         ctx.globalAlpha = 0.82;
-        ctx.lineWidth = Math.max(1, Math.min(3, (minSize + maxSize) / 90));
+        const lineWidth = Math.max(1, Math.min(3, (minSize + maxSize) / 90));
+        ctx.lineWidth = lineWidth;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
         ctx.beginPath();
@@ -1150,6 +1276,14 @@
         });
         ctx.stroke();
         ctx.restore();
+        if (outputScale === 1) {
+          htmlLines.push({
+            points: items.map((item) => ({ x: item.x, y: item.y })),
+            color: controls.axisLineColor.value,
+            alpha: 0.82,
+            width: lineWidth
+          });
+        }
       }
 
       items.forEach((item) => {
@@ -1896,6 +2030,8 @@
       setCanvasSize();
       updateLabels();
       clearCanvas(transparent);
+      htmlItems = [];
+      htmlLines = [];
       const rng = mulberry32(num("seed"));
       const chars = cleanText();
       const mode = controls.mode.value;
@@ -2010,6 +2146,8 @@
         controls.seed.value = String(Math.floor(Math.random() * 9998) + 1);
         queueDraw();
       });
+
+      document.getElementById("copyHtml").addEventListener("click", copyGeneratedHtml);
 
       document.getElementById("download").addEventListener("click", () => {
         const status = document.getElementById("downloadStatus");
