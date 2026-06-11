@@ -394,8 +394,8 @@
         <label id="axisWrap">
           涓酱鏂瑰悜
           <span class="segmented">
-            <label><input type="radio" name="axis" value="vertical" checked><span>绔栬酱</span></label>
-            <label><input type="radio" name="axis" value="horizontal"><span>妯酱</span></label>
+            <label><input type="radio" name="axis" value="vertical"><span>绔栬酱</span></label>
+            <label><input type="radio" name="axis" value="horizontal" checked><span>妯酱</span></label>
           </span>
         </label>
         <label id="rainOrderWrap">
@@ -546,7 +546,7 @@
           <input id="axisScatter" type="range" min="0" max="100" value="35" />
         </label>
         <label class="checkbox-row" id="axisBoxWrap">
-          <input id="axisBox" type="checkbox" />
+          <input id="axisBox" type="checkbox" checked />
           <span>清晰字随机添加色块</span>
         </label>
         <label id="axisBoxChanceWrap">
@@ -791,6 +791,8 @@
     let currentExportUrl = "";
     let currentExportName = "text-layout.png";
     let drawQueued = false;
+    let outputScale = 1;
+    let renderGuides = true;
 
     function mulberry32(seed) {
       return function random() {
@@ -802,7 +804,12 @@
     }
 
     function num(id) {
-      return Number(controls[id].value);
+      const scalable = new Set([
+        "minSize", "maxSize", "blur", "tearLetterSpacing", "tearBlurRadius",
+        "padding"
+      ]);
+      const value = Number(controls[id].value);
+      return scalable.has(id) ? value * outputScale : value;
     }
 
     function clamp(value, min, max) {
@@ -943,8 +950,9 @@
     }
 
     function setCanvasSize() {
-      const w = clamp(parseInt(controls.canvasW.value, 10) || 1200, 320, 2600);
-      const h = clamp(parseInt(controls.canvasH.value, 10) || 900, 320, 2600);
+      const maxDimension = outputScale > 1 ? 5200 : 2600;
+      const w = clamp(Math.round((parseInt(controls.canvasW.value, 10) || 1200) * outputScale), 320, maxDimension);
+      const h = clamp(Math.round((parseInt(controls.canvasH.value, 10) || 900) * outputScale), 320, maxDimension);
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -1082,19 +1090,21 @@
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,255,255,0.08)";
-      ctx.setLineDash([8, 14]);
-      ctx.beginPath();
-      if (axis === "vertical") {
-        ctx.moveTo(cx, 0);
-        ctx.lineTo(cx, canvas.height);
-      } else {
-        ctx.moveTo(0, cy);
-        ctx.lineTo(canvas.width, cy);
+      if (renderGuides) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.setLineDash([8, 14]);
+        ctx.beginPath();
+        if (axis === "vertical") {
+          ctx.moveTo(cx, 0);
+          ctx.lineTo(cx, canvas.height);
+        } else {
+          ctx.moveTo(0, cy);
+          ctx.lineTo(canvas.width, cy);
+        }
+        ctx.stroke();
+        ctx.restore();
       }
-      ctx.stroke();
-      ctx.restore();
 
       const items = [];
 
@@ -1167,14 +1177,16 @@
       const visualIndexes = columnVisualIndexes(columnCount, controls.rainOrder.value, rng);
       let drawn = 0;
 
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,255,255,0.07)";
-      ctx.setLineDash([10, 16]);
-      ctx.beginPath();
-      ctx.moveTo(0, axisY);
-      ctx.lineTo(canvas.width, axisY);
-      ctx.stroke();
-      ctx.restore();
+      if (renderGuides) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.07)";
+        ctx.setLineDash([10, 16]);
+        ctx.beginPath();
+        ctx.moveTo(0, axisY);
+        ctx.lineTo(canvas.width, axisY);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       if (strictInputCountActive()) {
         const lines = textLines();
@@ -1269,14 +1281,16 @@
       const availableHeight = Math.max(80, visibleBottom - visibleTop);
       let drawn = 0;
 
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,255,255,0.07)";
-      ctx.setLineDash([10, 16]);
-      ctx.beginPath();
-      ctx.moveTo(centerX, 0);
-      ctx.lineTo(centerX, canvas.height);
-      ctx.stroke();
-      ctx.restore();
+      if (renderGuides) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.07)";
+        ctx.setLineDash([10, 16]);
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, canvas.height);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       if (strictInputCountActive()) {
         const lines = textLines();
@@ -1877,7 +1891,8 @@
       return points;
     }
 
-    function render(transparent = false) {
+    function render(transparent = false, guides = true) {
+      renderGuides = guides;
       setCanvasSize();
       updateLabels();
       clearCanvas(transparent);
@@ -1939,6 +1954,7 @@
       if (mode === "image") drawImageMode(rng, chars);
       if (mode === "imageFill") drawImageFillMode(chars);
       applyGlitchEffect(rng);
+      renderGuides = true;
     }
 
     function draw() {
@@ -1999,9 +2015,12 @@
         const status = document.getElementById("downloadStatus");
           status.textContent = "正在生成...";
         const transparent = controls.transparentExport.checked;
-        if (transparent) render(true);
+        const previousOutputScale = outputScale;
+        outputScale = 2;
+        render(transparent, false);
         canvas.toBlob((blob) => {
-          if (transparent) draw();
+          outputScale = previousOutputScale;
+          draw();
           if (!blob) {
             status.textContent = "生成失败";
             return;
