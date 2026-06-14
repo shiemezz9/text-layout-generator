@@ -797,8 +797,10 @@
     let drawQueued = false;
     let outputScale = 1;
     let renderGuides = true;
+    let renderTransparent = false;
     let htmlItems = [];
     let htmlLines = [];
+    let fontLoadToken = 0;
 
     function mulberry32(seed) {
       return function random() {
@@ -987,6 +989,39 @@
       return controls.fontFamily.value;
     }
 
+    function activeFontWeight() {
+      return controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+    }
+
+    async function ensureActiveFontLoaded() {
+      if (!document.fonts || !document.fonts.load) return;
+      const token = ++fontLoadToken;
+      const minSize = Math.max(16, Math.min(num("minSize"), num("maxSize")));
+      const maxSize = Math.max(minSize, Math.max(num("minSize"), num("maxSize")));
+      const weight = activeFontWeight();
+      const stack = fontStack();
+      const status = document.getElementById("downloadStatus");
+      if (status) status.textContent = "字体加载中...";
+      try {
+        await Promise.all([
+          document.fonts.load(`${weight} ${minSize}px ${stack}`),
+          document.fonts.load(`${weight} ${maxSize}px ${stack}`),
+          document.fonts.ready
+        ]);
+      } catch (error) {
+        // Browser font loading can fail for network reasons; draw with the best available font.
+      }
+      if (token === fontLoadToken) {
+        draw();
+        if (status && status.textContent === "字体加载中...") {
+          status.textContent = "字体已更新";
+          window.setTimeout(() => {
+            if (status.textContent === "字体已更新") status.textContent = "";
+          }, 1200);
+        }
+      }
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replace(/&/g, "&amp;")
@@ -1074,7 +1109,7 @@
       ctx.globalAlpha = alpha;
       ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
       ctx.fillStyle = controls.fontColor.value;
-      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      const weight = activeFontWeight();
       ctx.font = `${weight} ${Math.max(4, size)}px ${fontStack()}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -1101,7 +1136,7 @@
       ctx.rotate(angle);
       ctx.globalAlpha = alpha;
       ctx.filter = "none";
-      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      const weight = activeFontWeight();
       const fontSize = Math.max(4, size);
       ctx.font = `${weight} ${fontSize}px ${fontStack()}`;
       const metrics = ctx.measureText(char);
@@ -1139,7 +1174,7 @@
       ctx.globalAlpha = alpha;
       ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
       ctx.fillStyle = controls.fontColor.value;
-      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      const weight = activeFontWeight();
       ctx.font = `${weight} ${Math.max(4, size)}px ${fontStack()}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -1165,7 +1200,7 @@
       ctx.globalAlpha = alpha;
       ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
       ctx.fillStyle = color;
-      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      const weight = activeFontWeight();
       ctx.font = `${weight} ${Math.max(4, size)}px ${fontStack()}`;
       ctx.textAlign = align;
       ctx.textBaseline = "middle";
@@ -1396,11 +1431,13 @@
         }
       }
 
-      const gradient = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
-      gradient.addColorStop(0, "rgba(0,0,0,0)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.38)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (!renderTransparent) {
+        const gradient = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
+        gradient.addColorStop(0, "rgba(0,0,0,0)");
+        gradient.addColorStop(1, "rgba(0,0,0,0.38)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
 
     function drawBarrageMode(rng, chars) {
@@ -1501,11 +1538,13 @@
         }
       }
 
-      const gradient = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
-      gradient.addColorStop(0, "rgba(0,0,0,0)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.3)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (!renderTransparent) {
+        const gradient = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
+        gradient.addColorStop(0, "rgba(0,0,0,0)");
+        gradient.addColorStop(1, "rgba(0,0,0,0.3)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
 
     function drawTearBlurMode(rng, chars) {
@@ -1524,7 +1563,7 @@
       baseLayer.width = canvas.width;
       baseLayer.height = canvas.height;
       const bctx = baseLayer.getContext("2d");
-      const weight = controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
+      const weight = activeFontWeight();
       const font = `${weight} ${baseSize}px ${fontStack()}`;
       const textBounds = [];
 
@@ -2030,6 +2069,7 @@
 
     function render(transparent = false, guides = true) {
       renderGuides = guides;
+      renderTransparent = transparent;
       setCanvasSize();
       updateLabels();
       clearCanvas(transparent);
@@ -2094,6 +2134,7 @@
       if (mode === "imageFill") drawImageFillMode(chars);
       applyGlitchEffect(rng);
       renderGuides = true;
+      renderTransparent = false;
     }
 
     function draw() {
@@ -2126,6 +2167,7 @@
         if (el.type !== "file") el.addEventListener("input", queueDraw);
         if (el.tagName === "SELECT") el.addEventListener("change", queueDraw);
       });
+      controls.fontFamily.addEventListener("change", ensureActiveFontLoaded);
       document.querySelectorAll("input[name='axis']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='fillDirection']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='floatDirection']").forEach((el) => el.addEventListener("change", queueDraw));
@@ -2237,6 +2279,10 @@
     repairLabels();
     wireEvents();
     draw();
+    ensureActiveFontLoaded();
+    if (document.fonts && document.fonts.addEventListener) {
+      document.fonts.addEventListener("loadingdone", () => draw());
+    }
   </script>
 </body>
 </html>
