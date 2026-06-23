@@ -1191,9 +1191,15 @@
       const boxH = fontSize * 1.32;
       ctx.fillStyle = controls.fontColor.value;
       ctx.fillRect(-boxW / 2, -boxH / 2, boxW, boxH);
-      ctx.fillStyle = controls.bgColor.value;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
+      if (renderTransparent) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#000";
+      } else {
+        ctx.fillStyle = controls.bgColor.value;
+      }
       ctx.fillText(char, 0, 0);
       ctx.restore();
       recordHtmlItem({
