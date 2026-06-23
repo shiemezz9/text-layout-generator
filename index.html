@@ -1052,8 +1052,52 @@
       const font = fontStack();
       const bg = controls.transparentExport.checked ? "transparent" : controls.bgColor.value;
       const fontColor = controls.fontColor.value;
-      const items = htmlItems.map((item) => {
+      const glitchEnabled = controls.glitch.checked && num("glitchAmount") > 0;
+      const glitchAmount = num("glitchAmount") / 100;
+      const glitchCss = glitchEnabled ? `
+  <style>
+    .text-layout-export .tlg-glitch {
+      isolation: isolate;
+    }
+    .text-layout-export .tlg-glitch::before,
+    .text-layout-export .tlg-glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: inherit;
+      font: inherit;
+      line-height: inherit;
+      white-space: inherit;
+      pointer-events: none;
+    }
+    .text-layout-export .tlg-glitch::before {
+      clip-path: inset(var(--g1-top) 0 var(--g1-bottom) 0);
+      transform: translateX(var(--g-shift));
+      opacity: var(--g-opacity);
+      mix-blend-mode: screen;
+    }
+    .text-layout-export .tlg-glitch::after {
+      clip-path: inset(var(--g2-top) 0 var(--g2-bottom) 0);
+      transform: translateX(var(--g-shift-2));
+      opacity: var(--g-opacity-2);
+      mix-blend-mode: multiply;
+    }
+  </style>
+` : "";
+      const items = htmlItems.map((item, index) => {
         const filter = item.blur > 0 ? `filter: blur(${cssNumber(item.blur)}px);` : "";
+        const wave = Math.sin((index + 1) * 12.9898 + num("seed") * 0.017);
+        const shift = (3 + Math.abs(wave) * 11) * glitchAmount * (wave < 0 ? -1 : 1);
+        const bandOne = 5 + Math.abs(Math.sin(index * 2.41)) * 38;
+        const bandTwo = 52 + Math.abs(Math.cos(index * 1.73)) * 30;
+        const glitchStyle = glitchEnabled
+          ? `--g-shift: ${cssNumber(shift)}px; --g-shift-2: ${cssNumber(shift * -0.82)}px; --g-opacity: ${cssNumber(0.22 + glitchAmount * 0.58, 3)}; --g-opacity-2: ${cssNumber((0.22 + glitchAmount * 0.58) * 0.82, 3)}; --g1-top: ${cssNumber(bandOne)}%; --g1-bottom: ${cssNumber(Math.max(0, 84 - bandOne))}%; --g2-top: ${cssNumber(bandTwo)}%; --g2-bottom: ${cssNumber(Math.max(0, 94 - bandTwo))}%;`
+          : "";
+        const glitchAttrs = glitchEnabled
+          ? ` class="tlg-glitch" data-text="${escapeHtml(item.text)}"`
+          : "";
         const common = [
           "position: absolute",
           `left: ${cssNumber(item.x)}px`,
@@ -1063,20 +1107,23 @@
           `font: ${item.weight} ${cssNumber(item.size)}px ${font}`,
           "line-height: 1",
           "white-space: pre",
+          "display: inline-grid",
+          "place-items: center",
           `opacity: ${cssNumber(item.alpha, 3)}`,
+          glitchStyle,
           filter
         ].filter(Boolean).join("; ");
 
         if (item.boxed) {
-          return `  <span style="${common}; display: inline-grid; place-items: center; width: ${cssNumber(item.boxW)}px; height: ${cssNumber(item.boxH)}px; background: ${fontColor}; color: ${bg === "transparent" ? controls.bgColor.value : bg};">${escapeHtml(item.text)}</span>`;
+          return `  <span${glitchAttrs} style="${common}; width: ${cssNumber(item.boxW)}px; height: ${cssNumber(item.boxH)}px; background: ${fontColor}; color: ${bg === "transparent" ? controls.bgColor.value : bg};">${escapeHtml(item.text)}</span>`;
         }
-        return `  <span style="${common}; color: ${item.color || fontColor};">${escapeHtml(item.text)}</span>`;
+        return `  <span${glitchAttrs} style="${common}; color: ${item.color || fontColor};">${escapeHtml(item.text)}</span>`;
       }).join("\n");
       const lines = htmlLines.length
         ? `  <svg style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none;" viewBox="0 0 ${width} ${height}">\n${htmlLines.map((line) => `    <polyline points="${line.points.map((point) => `${cssNumber(point.x)},${cssNumber(point.y)}`).join(" ")}" fill="none" stroke="${line.color}" stroke-opacity="${cssNumber(line.alpha, 3)}" stroke-width="${cssNumber(line.width)}" stroke-linecap="round" stroke-linejoin="round" />`).join("\n")}\n  </svg>\n`
         : "";
 
-      return `<div class="text-layout-export" style="position: relative; width: ${width}px; height: ${height}px; overflow: hidden; background: ${bg}; font-family: ${font};">\n${lines}${items}\n</div>`;
+      return `<div class="text-layout-export" style="position: relative; width: ${width}px; height: ${height}px; overflow: hidden; background: ${bg}; font-family: ${font};">\n${glitchCss}${lines}${items}\n</div>`;
     }
 
     async function copyGeneratedHtml() {
