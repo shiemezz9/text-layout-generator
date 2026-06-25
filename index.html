@@ -289,6 +289,19 @@
       padding: 3px;
     }
 
+    input[type="file"] {
+      padding: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .field-hint {
+      margin-top: -6px;
+      color: #9f988f;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
     input[type="range"] {
       accent-color: var(--accent);
     }
@@ -491,6 +504,11 @@
             <option value="'DotGothic16', 'Noto Sans SC', monospace">鍍忕礌椋庯細DotGothic16</option>
           </select>
         </label>
+        <label>
+          上传字体
+          <input id="fontUpload" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" />
+          <span class="field-hint" id="fontUploadHint">支持 TTF / OTF / WOFF / WOFF2，仅在当前浏览器本地使用。</span>
+        </label>
       </section>
 
       <section class="section">
@@ -637,7 +655,7 @@
     const ctx = canvas.getContext("2d");
     const controls = {};
     const ids = [
-      "textInput", "mode", "bgColor", "fontColor", "fontFamily", "count",
+      "textInput", "mode", "bgColor", "fontColor", "fontFamily", "fontUpload", "count",
       "minSize", "maxSize", "rotation", "blur", "spread", "padding", "axisBox", "axisBoxChance", "axisLine", "axisLineColor",
       "tearLetterSpacing", "tearLineSpacing", "tearBlurRadius", "depthXRotation", "depthYRotation", "depthZRotation",
       "seed", "canvasW", "canvasH", "imageInput", "transparentExport", "glitch", "glitchAmount", "axisScatter", "rainAxis", "imageThreshold",
@@ -682,6 +700,7 @@
       setLeadingText('label:has(#bgColor)', "背景颜色");
       setLeadingText('label:has(#fontColor)', "字体颜色");
       setLeadingText('label:has(#fontFamily)', "字体");
+      setLeadingText('label:has(#fontUpload)', "上传字体");
       setLeadingText('label:has(#canvasW)', "宽度");
       setLeadingText('label:has(#canvasH)', "高度");
       setLeadingText("#axisLineColorWrap", "连线颜色");
@@ -736,6 +755,7 @@
         ["#randomize", "随机生成"],
         ["#download", "下载 PNG"],
         ["#copyHtml", "复制 HTML"],
+        ["#fontUploadHint", "支持 TTF / OTF / WOFF / WOFF2，仅在当前浏览器本地使用。复制 HTML 时会内嵌上传字体。"],
         [".export-preview-title span", "PNG 已生成，右键或长按图片可保存"],
         [".export-preview-hint", "移动端长按预览图可保存；如果浏览器拦截，使用下方保存按钮。"],
         ["#closePreview", "关闭"],
@@ -801,6 +821,10 @@
     let htmlItems = [];
     let htmlLines = [];
     let fontLoadToken = 0;
+    let customFontFace = null;
+    let customFontDataUrl = "";
+    let customFontFamily = "";
+    let customFontFileName = "";
 
     function mulberry32(seed) {
       return function random() {
@@ -989,6 +1013,68 @@
       return controls.fontFamily.value;
     }
 
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function sanitizeFontFamily(name) {
+      const base = name
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^\w\u4e00-\u9fa5-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return `UploadedFont-${base || Date.now()}`;
+    }
+
+    function uploadedFontFormat(fileName) {
+      const lower = fileName.toLowerCase();
+      if (lower.endsWith(".otf")) return "opentype";
+      if (lower.endsWith(".ttf")) return "truetype";
+      if (lower.endsWith(".woff2")) return "woff2";
+      return "woff";
+    }
+
+    async function loadUploadedFont(file) {
+      if (!file) return;
+      const status = document.getElementById("downloadStatus");
+      const hint = document.getElementById("fontUploadHint");
+      if (status) status.textContent = "上传字体加载中...";
+      try {
+        const family = sanitizeFontFamily(file.name);
+        const dataUrl = await fileToDataUrl(file);
+        const nextFace = new FontFace(family, `url("${dataUrl}")`);
+        await nextFace.load();
+        if (customFontFace && document.fonts && document.fonts.delete) {
+          document.fonts.delete(customFontFace);
+        }
+        document.fonts.add(nextFace);
+        customFontFace = nextFace;
+        customFontDataUrl = dataUrl;
+        customFontFamily = family;
+        customFontFileName = file.name;
+
+        let option = controls.fontFamily.querySelector("option[data-custom='true']");
+        if (!option) {
+          option = document.createElement("option");
+          option.dataset.custom = "true";
+          controls.fontFamily.appendChild(option);
+        }
+        option.value = `'${family}', 'Noto Sans SC', sans-serif`;
+        option.textContent = `上传字体：${file.name.replace(/\.[^.]+$/, "")}`;
+        option.dataset.weight = "400";
+        controls.fontFamily.value = option.value;
+        if (hint) hint.textContent = `已载入：${file.name}`;
+        await ensureActiveFontLoaded();
+      } catch (error) {
+        if (status) status.textContent = "字体加载失败";
+        if (hint) hint.textContent = "字体加载失败，请换一个 TTF / OTF / WOFF / WOFF2 文件。";
+      }
+    }
+
     function activeFontWeight() {
       return controls.fontFamily.selectedOptions[0]?.dataset.weight || "400";
     }
@@ -1054,6 +1140,17 @@
       const fontColor = controls.fontColor.value;
       const glitchEnabled = controls.glitch.checked && num("glitchAmount") > 0;
       const glitchAmount = num("glitchAmount") / 100;
+      const customFontCss = customFontDataUrl && customFontFamily && font.includes(customFontFamily) ? `
+  <style>
+    @font-face {
+      font-family: '${customFontFamily}';
+      src: url("${customFontDataUrl}") format("${uploadedFontFormat(customFontFileName)}");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
+` : "";
       const glitchCss = glitchEnabled ? `
   <style>
     .text-layout-export .tlg-glitch {
@@ -1123,7 +1220,7 @@
         ? `  <svg style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none;" viewBox="0 0 ${width} ${height}">\n${htmlLines.map((line) => `    <polyline points="${line.points.map((point) => `${cssNumber(point.x)},${cssNumber(point.y)}`).join(" ")}" fill="none" stroke="${line.color}" stroke-opacity="${cssNumber(line.alpha, 3)}" stroke-width="${cssNumber(line.width)}" stroke-linecap="round" stroke-linejoin="round" />`).join("\n")}\n  </svg>\n`
         : "";
 
-      return `<div class="text-layout-export" style="position: relative; width: ${width}px; height: ${height}px; overflow: hidden; background: ${bg}; font-family: ${font};">\n${glitchCss}${lines}${items}\n</div>`;
+      return `<div class="text-layout-export" style="position: relative; width: ${width}px; height: ${height}px; overflow: hidden; background: ${bg}; font-family: ${font};">\n${customFontCss}${glitchCss}${lines}${items}\n</div>`;
     }
 
     async function copyGeneratedHtml() {
@@ -2221,6 +2318,10 @@
         if (el.tagName === "SELECT") el.addEventListener("change", queueDraw);
       });
       controls.fontFamily.addEventListener("change", ensureActiveFontLoaded);
+      controls.fontUpload.addEventListener("change", (event) => {
+        const file = event.target.files && event.target.files[0];
+        loadUploadedFont(file);
+      });
       document.querySelectorAll("input[name='axis']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='fillDirection']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='floatDirection']").forEach((el) => el.addEventListener("change", queueDraw));
