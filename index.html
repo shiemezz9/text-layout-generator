@@ -506,6 +506,10 @@
           <input id="reflection" type="checkbox" />
           <span>开启水面倒影</span>
         </label>
+        <label class="checkbox-row" id="hideReflectionSurfaceWrap">
+          <input id="hideReflectionSurface" type="checkbox" />
+          <span>隐藏水平面</span>
+        </label>
         <label id="reflectionSurfaceWrap">
           <span class="control-head"><span>水平面高度</span><span class="value" id="reflectionSurfaceValue"></span></span>
           <input id="reflectionSurface" type="range" min="5" max="95" value="60" />
@@ -712,7 +716,7 @@
       "imageLineBreaks", "imageRepeatFill", "rainOrder", "rainLineBreaks", "strictInputCount", "strictInputOrder",
       "circleStyle", "circleSpacing", "circleRingGap", "circleSize", "circleRadius",
       "circleSizeRandom", "circleDistanceRandom", "reflection", "reflectionSurface",
-      "reflectionBlur", "reflectionWaves"
+      "reflectionBlur", "reflectionWaves", "hideReflectionSurface"
     ];
 
     ids.forEach((id) => {
@@ -788,6 +792,7 @@
       ["#glitchWrap span", "叠加故障效果"],
       ["#glitchAmountWrap .control-head span:first-child", "故障强度"],
       ["#reflectionWrap span", "开启水面倒影"],
+      ["#hideReflectionSurfaceWrap span", "隐藏水平面"],
       ["#reflectionSurfaceWrap .control-head span:first-child", "水平面高度"],
       ["#reflectionBlurWrap .control-head span:first-child", "倒影模糊程度"],
       ["#reflectionWavesWrap .control-head span:first-child", "水波纹密度"],
@@ -1985,9 +1990,11 @@
           shift, surface + sourceTop, width, sourceBottom - sourceTop);
         ctx.restore();
       }
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = controls.fontColor.value;
-      ctx.fillRect(0, surface, width, Math.max(1, outputScale));
+      if (!controls.hideReflectionSurface.checked) {
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = controls.fontColor.value;
+        ctx.fillRect(0, surface, width, Math.max(1, outputScale));
+      }
       ctx.restore();
     }
 
@@ -2527,6 +2534,7 @@
       document.getElementById("glitchWrap").style.display = "flex";
       showControl("glitchAmountWrap", controls.glitch.checked);
       document.getElementById("reflectionWrap").style.display = "flex";
+      document.getElementById("hideReflectionSurfaceWrap").style.display = controls.reflection.checked ? "flex" : "none";
       showControl("reflectionSurfaceWrap", controls.reflection.checked);
       showControl("reflectionBlurWrap", controls.reflection.checked);
       showControl("reflectionWavesWrap", controls.reflection.checked);
