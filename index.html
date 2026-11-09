@@ -618,6 +618,14 @@
           <span class="control-head"><span>圆圈间距</span><span class="value" id="circleRingGapValue"></span></span>
           <input id="circleRingGap" type="range" min="0" max="80" value="18" />
         </label>
+        <label id="circleSizeRandomWrap">
+          <span class="control-head"><span>随机字号幅度</span><span class="value" id="circleSizeRandomValue"></span></span>
+          <input id="circleSizeRandom" type="range" min="0" max="100" value="0" />
+        </label>
+        <label id="circleDistanceRandomWrap">
+          <span class="control-head"><span>段落距离中心随机度</span><span class="value" id="circleDistanceRandomValue"></span></span>
+          <input id="circleDistanceRandom" type="range" min="0" max="100" value="0" />
+        </label>
         <label id="seedWrap">
           <span class="control-head"><span>随机种子</span><span class="value" id="seedValue"></span></span>
           <input id="seed" type="range" min="1" max="9999" value="2026" />
@@ -685,7 +693,8 @@
       "tearLetterSpacing", "tearLineSpacing", "tearBlurRadius", "depthXRotation", "depthYRotation", "depthZRotation",
       "seed", "canvasW", "canvasH", "imageInput", "transparentExport", "glitch", "glitchAmount", "axisScatter", "rainAxis", "imageThreshold",
       "imageLineBreaks", "imageRepeatFill", "rainOrder", "rainLineBreaks", "strictInputCount", "strictInputOrder",
-      "circleStyle", "circleSpacing", "circleRingGap", "circleSize", "circleRadius"
+      "circleStyle", "circleSpacing", "circleRingGap", "circleSize", "circleRadius",
+      "circleSizeRandom", "circleDistanceRandom"
     ];
 
     ids.forEach((id) => {
@@ -783,6 +792,8 @@
         ["#circleSizeWrap .control-head span:first-child", "环形字号"],
         ["#circleRadiusWrap .control-head span:first-child", "外圈半径"],
         ["#circleRingGapWrap .control-head span:first-child", "圆圈间距"],
+        ["#circleSizeRandomWrap .control-head span:first-child", "随机字号幅度"],
+        ["#circleDistanceRandomWrap .control-head span:first-child", "段落距离中心随机度"],
         ["#seedWrap .control-head span:first-child", "随机种子"],
         ["#randomize", "随机生成"],
         ["#download", "下载 PNG"],
@@ -842,6 +853,8 @@
       circleSize: "px",
       circleRadius: "%",
       circleRingGap: "px",
+      circleSizeRandom: "%",
+      circleDistanceRandom: "%",
       seed: ""
     };
 
@@ -2253,20 +2266,21 @@
       return points;
     }
 
-    function ringLayout(chars, size, ringGap, letterGap, outerRadius) {
+    function ringLayout(glyphs, size, ringGap, letterGap, outerRadius, maxFactor) {
       const rings = [];
-      const step = size * 1.45 + ringGap;
-      ctx.font = `${activeFontWeight()} ${size}px ${fontStack()}`;
+      const step = size * maxFactor * 1.45 + ringGap;
       let index = 0;
-      for (let radius = outerRadius; radius >= size * 0.8 && index < chars.length; radius -= step) {
+      for (let radius = outerRadius; radius >= size * maxFactor * 0.8 && index < glyphs.length; radius -= step) {
         const circumference = Math.PI * 2 * radius;
         const ring = [];
         let used = 0;
-        while (index < chars.length) {
-          const char = chars[index];
-          const advance = Math.max(size * 0.28, ctx.measureText(char).width) + letterGap;
+        while (index < glyphs.length) {
+          const { char, factor } = glyphs[index];
+          const charSize = size * factor;
+          ctx.font = `${activeFontWeight()} ${charSize}px ${fontStack()}`;
+          const advance = Math.max(charSize * 0.28, ctx.measureText(char).width) + letterGap;
           if (ring.length && used + advance > circumference * 0.94) break;
-          ring.push({ char, advance });
+          ring.push({ char, size: charSize, advance });
           used += advance;
           index++;
         }
@@ -2275,27 +2289,33 @@
       return { rings, placed: index };
     }
 
-    function drawCircleRings(chars) {
+    function drawCircleRings(rng, chars) {
       if (!chars.length) return;
+      const randomAmount = num("circleSizeRandom") / 100;
+      const maxFactor = 1 + randomAmount * 0.5;
+      const glyphs = chars.map((char) => ({
+        char,
+        factor: 1 + randomBetween(rng, -0.5, 0.5) * randomAmount
+      }));
       const outerRadius = Math.min(
         Math.min(canvas.width, canvas.height) * num("circleRadius") / 100,
-        Math.min(canvas.width, canvas.height) / 2 - num("circleSize") / 2 - 8 * outputScale
+        Math.min(canvas.width, canvas.height) / 2 - num("circleSize") * maxFactor / 2 - 8 * outputScale
       );
       const desiredSize = num("circleSize");
       let layout;
       let size = desiredSize;
       let ringGap = num("circleRingGap");
       while (size >= 4 * outputScale) {
-        layout = ringLayout(chars, size, ringGap, num("circleSpacing"), outerRadius);
-        if (layout.placed === chars.length) break;
+        layout = ringLayout(glyphs, size, ringGap, num("circleSpacing"), outerRadius, maxFactor);
+        if (layout.placed === glyphs.length) break;
         size -= outputScale;
       }
-      if (layout.placed < chars.length) {
+      if (layout.placed < glyphs.length) {
         ringGap = 0;
         size = desiredSize;
         while (size >= 4 * outputScale) {
-          layout = ringLayout(chars, size, ringGap, num("circleSpacing"), outerRadius);
-          if (layout.placed === chars.length) break;
+          layout = ringLayout(glyphs, size, ringGap, num("circleSpacing"), outerRadius, maxFactor);
+          if (layout.placed === glyphs.length) break;
           size -= outputScale;
         }
       }
@@ -2305,16 +2325,18 @@
         let distance = -items[0].advance / 2;
         const circle = Math.PI * 2 * radius;
         const spread = circle / used;
-        items.forEach(({ char, advance }) => {
+        items.forEach(({ char, size: charSize, advance }) => {
           const angle = -Math.PI / 2 + (distance + advance / 2) * spread / radius;
+          const blur = Math.pow(rng(), 1.2) * num("blur");
+          const alpha = clamp(1 - blur / Math.max(1, num("blur") + 3), 0.12, 1);
           drawText(char, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius,
-            size, angle + Math.PI / 2, 1, 0);
+            charSize, angle + Math.PI / 2, alpha, blur);
           distance += advance;
         });
       });
     }
 
-    function drawCircleRadial() {
+    function drawCircleRadial(rng) {
       const lines = sourceLines();
       const count = lines.length;
       const cx = canvas.width / 2;
@@ -2324,23 +2346,34 @@
       const minSize = Math.min(num("minSize"), num("maxSize"));
       const maxSize = Math.max(num("minSize"), num("maxSize"));
       const innerRadius = Math.min(outerRadius * 0.5, Math.max(minSize * 1.2, minSize * count * 0.24));
+      const sizeRandom = num("circleSizeRandom") / 100;
+      const distanceRandom = num("circleDistanceRandom") / 100;
       lines.forEach((line, lineIndex) => {
         const chars = lineChars(line);
+        const weights = Array.from({ length: Math.max(0, chars.length - 1) },
+          () => 1 + randomBetween(rng, -0.9, 0.9) * sizeRandom);
+        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+        let completedWeight = 0;
         const sizes = chars.map((_, index) => {
-          const progress = chars.length <= 1 ? 0 : index / (chars.length - 1);
-          return maxSize + (minSize - maxSize) * progress;
+          if (index) completedWeight += weights[index - 1];
+          return maxSize + (minSize - maxSize) * (totalWeight ? completedWeight / totalWeight : 0);
         });
         const advances = sizes.map((size, index) => size * (chars[index] === " " ? 0.42 : 1.08));
-        const available = outerRadius - innerRadius;
+        const offset = randomBetween(rng, -1, 1) * (outerRadius - innerRadius) * 0.3 * distanceRandom;
+        const startRadius = clamp(outerRadius + offset, innerRadius + maxSize * 0.5,
+          minDimension / 2 - maxSize * 0.5 - 8 * outputScale);
+        const available = startRadius - innerRadius;
         const scale = Math.min(1, available / advances.reduce((sum, advance) => sum + advance, 0));
         const angle = -Math.PI / 2 + lineIndex * Math.PI * 2 / count;
-        let distance = outerRadius;
+        let distance = startRadius;
         chars.forEach((char, index) => {
           const advance = advances[index] * scale;
           distance -= advance / 2;
           const size = sizes[index] * scale;
+          const blur = Math.pow(rng(), 1.2) * num("blur");
+          const alpha = clamp(1 - blur / Math.max(1, num("blur") + 3), 0.12, 1);
           drawText(char, cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance,
-            size, angle + Math.PI / 2, 1, 0);
+            size, angle + Math.PI / 2, alpha, blur);
           distance -= advance / 2;
         });
       });
@@ -2372,7 +2405,7 @@
       document.getElementById("strictInputCountWrap").style.display = mode === "circle" ? "none" : "flex";
       document.getElementById("strictInputOrderWrap").style.display = mode === "circle" ? "none" : "flex";
       document.getElementById("circleStyleWrap").style.display = mode === "circle" ? "grid" : "none";
-      document.getElementById("randomize").style.display = mode === "circle" ? "none" : "inline-block";
+      document.getElementById("randomize").style.display = "inline-block";
       document.getElementById("imageWrap").style.display = isImageMode ? "grid" : "none";
       document.getElementById("fillDirectionWrap").style.display = mode === "imageFill" ? "grid" : "none";
       document.getElementById("floatDirectionWrap").style.display = mode === "depthFloat" ? "grid" : "none";
@@ -2386,7 +2419,7 @@
       showControl("minSizeWrap", mode !== "circle" || controls.circleStyle.value === "radial");
       showControl("maxSizeWrap", mode !== "imageFill" && (mode !== "circle" || controls.circleStyle.value === "radial"));
       showControl("rotationWrap", mode === "axis" || mode === "image");
-      showControl("blurWrap", mode === "axis" || isRainLikeMode || mode === "image" || isSoftEffectMode);
+      showControl("blurWrap", mode === "axis" || isRainLikeMode || mode === "image" || isSoftEffectMode || mode === "circle");
       showControl("tearLetterSpacingWrap", mode === "tearBlur");
       showControl("tearLineSpacingWrap", mode === "tearBlur");
       showControl("tearBlurRadiusWrap", mode === "tearBlur");
@@ -2402,11 +2435,13 @@
       showControl("rainAxisWrap", isRainLikeMode);
       showControl("imageThresholdWrap", isImageMode);
       showControl("paddingWrap", isRainLikeMode || isImageMode || mode === "tearBlur");
-      showControl("seedWrap", mode !== "imageFill" && mode !== "circle");
+      showControl("seedWrap", mode !== "imageFill");
       showControl("circleSizeWrap", mode === "circle" && controls.circleStyle.value === "rings");
       showControl("circleRadiusWrap", mode === "circle");
       showControl("circleSpacingWrap", mode === "circle" && controls.circleStyle.value === "rings");
       showControl("circleRingGapWrap", mode === "circle" && controls.circleStyle.value === "rings");
+      showControl("circleSizeRandomWrap", mode === "circle");
+      showControl("circleDistanceRandomWrap", mode === "circle" && controls.circleStyle.value === "radial");
       document.getElementById("glitchWrap").style.display = "flex";
       showControl("glitchAmountWrap", controls.glitch.checked);
 
@@ -2417,8 +2452,8 @@
       if (mode === "depthFloat") drawDepthFloatMode(rng, chars);
       if (mode === "image") drawImageMode(rng, chars);
       if (mode === "imageFill") drawImageFillMode(chars);
-      if (mode === "circle" && controls.circleStyle.value === "rings") drawCircleRings(chars);
-      if (mode === "circle" && controls.circleStyle.value === "radial") drawCircleRadial();
+      if (mode === "circle" && controls.circleStyle.value === "rings") drawCircleRings(rng, chars);
+      if (mode === "circle" && controls.circleStyle.value === "radial") drawCircleRadial(rng);
       applyGlitchEffect(rng);
       renderGuides = true;
       renderTransparent = false;
