@@ -502,6 +502,23 @@
           <span class="control-head"><span>故障强度</span><span class="value" id="glitchAmountValue"></span></span>
           <input id="glitchAmount" type="range" min="0" max="100" value="35" />
         </label>
+        <label class="checkbox-row" id="reflectionWrap">
+          <input id="reflection" type="checkbox" />
+          <span>开启水面倒影</span>
+        </label>
+        <label id="reflectionSurfaceWrap">
+          <span class="control-head"><span>水平面高度</span><span class="value" id="reflectionSurfaceValue"></span></span>
+          <input id="reflectionSurface" type="range" min="5" max="95" value="60" />
+          <span class="field-hint">百分比从画布顶部起算；水面以下的原文字会被裁剪。</span>
+        </label>
+        <label id="reflectionBlurWrap">
+          <span class="control-head"><span>倒影模糊程度</span><span class="value" id="reflectionBlurValue"></span></span>
+          <input id="reflectionBlur" type="range" min="0" max="24" value="6" />
+        </label>
+        <label id="reflectionWavesWrap">
+          <span class="control-head"><span>水波纹密度</span><span class="value" id="reflectionWavesValue"></span></span>
+          <input id="reflectionWaves" type="range" min="0" max="100" value="45" />
+        </label>
         <label>
           瀛椾綋
           <select id="fontFamily">
@@ -694,7 +711,8 @@
       "seed", "canvasW", "canvasH", "imageInput", "transparentExport", "glitch", "glitchAmount", "axisScatter", "rainAxis", "imageThreshold",
       "imageLineBreaks", "imageRepeatFill", "rainOrder", "rainLineBreaks", "strictInputCount", "strictInputOrder",
       "circleStyle", "circleSpacing", "circleRingGap", "circleSize", "circleRadius",
-      "circleSizeRandom", "circleDistanceRandom"
+      "circleSizeRandom", "circleDistanceRandom", "reflection", "reflectionSurface",
+      "reflectionBlur", "reflectionWaves"
     ];
 
     ids.forEach((id) => {
@@ -769,6 +787,10 @@
       ["label:has(#transparentExport) span", "下载时使用透明背景"],
       ["#glitchWrap span", "叠加故障效果"],
       ["#glitchAmountWrap .control-head span:first-child", "故障强度"],
+      ["#reflectionWrap span", "开启水面倒影"],
+      ["#reflectionSurfaceWrap .control-head span:first-child", "水平面高度"],
+      ["#reflectionBlurWrap .control-head span:first-child", "倒影模糊程度"],
+      ["#reflectionWavesWrap .control-head span:first-child", "水波纹密度"],
         ["#axisBoxWrap span", "清晰字随机添加色块"],
         ["#axisLineWrap span", "启动连线"],
         ["#countWrap .control-head span:first-child", "文字数量"],
@@ -855,6 +877,9 @@
       circleRingGap: "px",
       circleSizeRandom: "%",
       circleDistanceRandom: "%",
+      reflectionSurface: "%",
+      reflectionBlur: "px",
+      reflectionWaves: "%",
       seed: ""
     };
 
@@ -887,7 +912,7 @@
     function num(id) {
       const scalable = new Set([
         "minSize", "maxSize", "blur", "tearLetterSpacing", "tearBlurRadius",
-        "padding", "circleSpacing", "circleRingGap", "circleSize"
+        "padding", "circleSpacing", "circleRingGap", "circleSize", "reflectionBlur"
       ]);
       const value = Number(controls[id].value);
       return scalable.has(id) ? value * outputScale : value;
@@ -1184,6 +1209,9 @@
     function buildHtmlCode() {
       const width = canvas.width;
       const height = canvas.height;
+      if (controls.reflection.checked) {
+        return `<div class="text-layout-export" style="width: ${width}px; height: ${height}px;"><img src="${canvas.toDataURL("image/png")}" alt="文字排版水面倒影" style="display: block; width: 100%; height: 100%;" /></div>`;
+      }
       const font = fontStack();
       const bg = controls.transparentExport.checked ? "transparent" : controls.bgColor.value;
       const fontColor = controls.fontColor.value;
@@ -1273,9 +1301,14 @@
     }
 
     async function copyGeneratedHtml() {
-      draw();
+      if (controls.reflection.checked) {
+        render(controls.transparentExport.checked, false);
+      } else {
+        draw();
+      }
       const status = document.getElementById("downloadStatus");
       const html = buildHtmlCode();
+      if (controls.reflection.checked) draw();
       try {
         await navigator.clipboard.writeText(html);
         status.textContent = "已复制 HTML";
@@ -1909,6 +1942,55 @@
       ctx.restore();
     }
 
+    function applyReflection(rng, transparent) {
+      if (!controls.reflection.checked) return;
+      const width = canvas.width;
+      const height = canvas.height;
+      const surface = Math.round(height * num("reflectionSurface") / 100);
+      const mirrored = document.createElement("canvas");
+      mirrored.width = width;
+      mirrored.height = height - surface;
+      const mirrorCtx = mirrored.getContext("2d");
+      mirrorCtx.translate(0, surface);
+      mirrorCtx.scale(1, -1);
+      mirrorCtx.drawImage(canvas, 0, 0, width, surface, 0, 0, width, surface);
+
+      ctx.save();
+      ctx.clearRect(0, surface, width, height - surface);
+      if (!transparent) {
+        ctx.fillStyle = controls.bgColor.value;
+        ctx.fillRect(0, surface, width, height - surface);
+      }
+      const bandHeight = Math.max(2, Math.round(6 * outputScale));
+      const waveAmount = num("reflectionWaves") / 100;
+      const waveCount = 3 + waveAmount * 32;
+      const maxBlur = num("reflectionBlur");
+      for (let y = surface; y < height; y += bandHeight) {
+        const stripHeight = Math.min(bandHeight, height - y);
+        const progress = (y + stripHeight / 2 - surface) / (height - surface);
+        const phase = progress * waveCount * Math.PI * 2;
+        const shift = waveAmount * outputScale * (4 + progress * 18) *
+          (Math.sin(phase) + Math.sin(phase * 1.7 + 0.8) * 0.35 + randomBetween(rng, -0.16, 0.16));
+        const blur = maxBlur * Math.pow(progress, 1.3);
+        const blurPad = Math.ceil(blur * 3);
+        const sourceTop = Math.max(0, y - surface - blurPad);
+        const sourceBottom = Math.min(mirrored.height, y - surface + stripHeight + blurPad);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, y, width, stripHeight);
+        ctx.clip();
+        ctx.globalAlpha = 0.85 * Math.pow(1 - progress, 0.8);
+        ctx.filter = blur > 0 ? `blur(${blur.toFixed(2)}px)` : "none";
+        ctx.drawImage(mirrored, 0, sourceTop, width, sourceBottom - sourceTop,
+          shift, surface + sourceTop, width, sourceBottom - sourceTop);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = controls.fontColor.value;
+      ctx.fillRect(0, surface, width, Math.max(1, outputScale));
+      ctx.restore();
+    }
+
     function extractEdges(img) {
       const sample = document.createElement("canvas");
       const maxSide = 360;
@@ -2444,6 +2526,10 @@
       showControl("circleDistanceRandomWrap", mode === "circle" && controls.circleStyle.value === "radial");
       document.getElementById("glitchWrap").style.display = "flex";
       showControl("glitchAmountWrap", controls.glitch.checked);
+      document.getElementById("reflectionWrap").style.display = "flex";
+      showControl("reflectionSurfaceWrap", controls.reflection.checked);
+      showControl("reflectionBlurWrap", controls.reflection.checked);
+      showControl("reflectionWavesWrap", controls.reflection.checked);
 
       if (mode === "axis") drawAxisMode(rng, chars);
       if (mode === "rain") drawRainMode(rng, chars);
@@ -2455,6 +2541,7 @@
       if (mode === "circle" && controls.circleStyle.value === "rings") drawCircleRings(rng, chars);
       if (mode === "circle" && controls.circleStyle.value === "radial") drawCircleRadial(rng);
       applyGlitchEffect(rng);
+      applyReflection(rng, transparent);
       renderGuides = true;
       renderTransparent = false;
     }
