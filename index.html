@@ -656,6 +656,7 @@
         <label id="circleDistanceRandomWrap">
           <span class="control-head"><span>段落距离中心随机度</span><span class="value" id="circleDistanceRandomValue"></span></span>
           <input id="circleDistanceRandom" type="range" min="0" max="100" value="0" />
+          <span class="field-hint">每段文字的内外两端分别错开，段落长度也会变化。</span>
         </label>
         <label id="seedWrap">
           <span class="control-head"><span>随机种子</span><span class="value" id="seedValue"></span></span>
@@ -2459,6 +2460,11 @@
         ? automaticInnerRadius : outerRadius * num("circleInnerRadius") / 100;
       const sizeRandom = num("circleSizeRandom") / 100;
       const distanceRandom = num("circleDistanceRandom") / 100;
+      const outerBound = Math.min(outerRadius,
+        Math.max(innerRadius + 2 * outputScale, minDimension / 2 - maxSize * 0.5 - 8 * outputScale));
+      const innerBound = Math.min(innerRadius, outerBound - 2 * outputScale);
+      const span = outerBound - innerBound;
+      const travel = span * 0.15 * distanceRandom;
       lines.forEach((line, lineIndex) => {
         const chars = lineChars(line);
         const weights = Array.from({ length: Math.max(0, chars.length - 1) },
@@ -2472,12 +2478,10 @@
             : maxSize + (minSize - maxSize) * progress;
         });
         const advances = sizes.map((size, index) => size * (chars[index] === " " ? 0.42 : 1.08));
-        const offset = randomBetween(rng, -1, 1) * (outerRadius - innerRadius) * 0.3 * distanceRandom;
-        const startRadius = reversed
-          ? clamp(innerRadius + offset, Math.min(innerRadius, outerRadius * 0.25), outerRadius - 2 * outputScale)
-          : clamp(outerRadius + offset, Math.min(innerRadius + maxSize * 0.5, outerRadius - 2 * outputScale),
-            minDimension / 2 - maxSize * 0.5 - 8 * outputScale);
-        const available = reversed ? outerRadius - startRadius : startRadius - innerRadius;
+        const innerEdge = innerBound + travel + randomBetween(rng, -travel, travel);
+        const outerEdge = outerBound - travel + randomBetween(rng, -travel, travel);
+        const available = outerEdge - innerEdge;
+        const startRadius = reversed ? innerEdge : outerEdge;
         const scale = Math.min(1, available / advances.reduce((sum, advance) => sum + advance, 0));
         const angle = -Math.PI / 2 + lineIndex * Math.PI * 2 / count;
         let distance = startRadius;
