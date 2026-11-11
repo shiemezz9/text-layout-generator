@@ -25,7 +25,9 @@
 
     body {
       margin: 0;
-      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
       background: #111;
       color: var(--text);
       font-family: Inter, "Noto Sans SC", "Microsoft YaHei", sans-serif;
@@ -34,13 +36,14 @@
     .app {
       display: grid;
       grid-template-columns: 340px minmax(0, 1fr);
-      min-height: 100vh;
+      height: 100%;
     }
 
     aside {
       border-right: 1px solid var(--line);
       background: linear-gradient(180deg, #171514, #111);
       padding: 18px;
+      min-height: 0;
       overflow: auto;
     }
 
@@ -49,6 +52,7 @@
       grid-template-rows: auto minmax(0, 1fr);
       background: #0d0d0d;
       min-width: 0;
+      min-height: 0;
     }
 
     header {
@@ -100,6 +104,7 @@
       display: grid;
       place-items: center;
       padding: 18px;
+      min-height: 0;
       overflow: auto;
     }
 
@@ -378,8 +383,15 @@
     }
 
     @media (max-width: 860px) {
+      body {
+        height: auto;
+        min-height: 100dvh;
+        overflow: auto;
+      }
+
       .app {
         grid-template-columns: 1fr;
+        height: auto;
       }
 
       aside {
@@ -2734,6 +2746,15 @@
     }
 
     function wireEvents() {
+      const optionsPanel = document.querySelector("aside");
+      document.querySelector("main").addEventListener("wheel", (event) => {
+        if (!window.matchMedia("(min-width: 861px)").matches || event.ctrlKey) return;
+        const distance = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? event.deltaY * optionsPanel.clientHeight
+            : event.deltaY;
+        optionsPanel.scrollBy({ top: distance, left: 0 });
+        event.preventDefault();
+      }, { passive: false });
       document.querySelectorAll("input, select, textarea").forEach((el) => {
         if (el.type !== "file") el.addEventListener("input", queueDraw);
         if (el.tagName === "SELECT") el.addEventListener("change", queueDraw);
