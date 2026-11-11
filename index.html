@@ -415,6 +415,10 @@
           </select>
           <span class="field-hint" id="circleStyleHint">放射排列时，每次换行代表一个段落。</span>
         </label>
+        <label class="checkbox-row" id="radialReverseWrap">
+          <input id="radialReverse" type="checkbox" />
+          <span>反向（从内向外）</span>
+        </label>
         <label id="axisWrap">
           涓酱鏂瑰悜
           <span class="segmented">
@@ -716,7 +720,7 @@
       "imageLineBreaks", "imageRepeatFill", "rainOrder", "rainLineBreaks", "strictInputCount", "strictInputOrder",
       "circleStyle", "circleSpacing", "circleRingGap", "circleSize", "circleRadius",
       "circleSizeRandom", "circleDistanceRandom", "reflection", "reflectionSurface",
-      "reflectionBlur", "reflectionWaves", "hideReflectionSurface"
+      "reflectionBlur", "reflectionWaves", "hideReflectionSurface", "radialReverse"
     ];
 
     ids.forEach((id) => {
@@ -771,6 +775,7 @@
       ["#mode option[value='image']", "6. 图片轮廓框字"],
       ["#mode option[value='imageFill']", "7. 图片填充字"],
       ["#mode option[value='circle']", "8. 文字环形排版"],
+      ["#radialReverseWrap span", "反向（从内向外）"],
         ["input[name='axis'][value='vertical'] + span", "竖轴"],
         ["input[name='axis'][value='horizontal'] + span", "横轴"],
       ["input[name='fillDirection'][value='horizontal'] + span", "横排"],
@@ -2427,6 +2432,7 @@
 
     function drawCircleRadial(rng) {
       const lines = sourceLines();
+      const reversed = controls.radialReverse.checked;
       const count = lines.length;
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
@@ -2445,25 +2451,29 @@
         let completedWeight = 0;
         const sizes = chars.map((_, index) => {
           if (index) completedWeight += weights[index - 1];
-          return maxSize + (minSize - maxSize) * (totalWeight ? completedWeight / totalWeight : 0);
+          const progress = totalWeight ? completedWeight / totalWeight : 0;
+          return reversed ? minSize + (maxSize - minSize) * progress
+            : maxSize + (minSize - maxSize) * progress;
         });
         const advances = sizes.map((size, index) => size * (chars[index] === " " ? 0.42 : 1.08));
         const offset = randomBetween(rng, -1, 1) * (outerRadius - innerRadius) * 0.3 * distanceRandom;
-        const startRadius = clamp(outerRadius + offset, innerRadius + maxSize * 0.5,
-          minDimension / 2 - maxSize * 0.5 - 8 * outputScale);
-        const available = startRadius - innerRadius;
+        const startRadius = reversed
+          ? clamp(innerRadius + offset, Math.min(innerRadius, outerRadius * 0.25), outerRadius * 0.75)
+          : clamp(outerRadius + offset, innerRadius + maxSize * 0.5,
+            minDimension / 2 - maxSize * 0.5 - 8 * outputScale);
+        const available = reversed ? outerRadius - startRadius : startRadius - innerRadius;
         const scale = Math.min(1, available / advances.reduce((sum, advance) => sum + advance, 0));
         const angle = -Math.PI / 2 + lineIndex * Math.PI * 2 / count;
         let distance = startRadius;
         chars.forEach((char, index) => {
           const advance = advances[index] * scale;
-          distance -= advance / 2;
+          distance += (reversed ? 1 : -1) * advance / 2;
           const size = sizes[index] * scale;
           const blur = Math.pow(rng(), 1.2) * num("blur");
           const alpha = clamp(1 - blur / Math.max(1, num("blur") + 3), 0.12, 1);
           drawText(char, cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance,
-            size, angle + Math.PI / 2, alpha, blur);
-          distance -= advance / 2;
+            size, angle + (reversed ? -Math.PI / 2 : Math.PI / 2), alpha, blur);
+          distance += (reversed ? 1 : -1) * advance / 2;
         });
       });
     }
@@ -2494,6 +2504,7 @@
       document.getElementById("strictInputCountWrap").style.display = mode === "circle" ? "none" : "flex";
       document.getElementById("strictInputOrderWrap").style.display = mode === "circle" ? "none" : "flex";
       document.getElementById("circleStyleWrap").style.display = mode === "circle" ? "grid" : "none";
+      document.getElementById("radialReverseWrap").style.display = mode === "circle" && controls.circleStyle.value === "radial" ? "flex" : "none";
       document.getElementById("randomize").style.display = "inline-block";
       document.getElementById("imageWrap").style.display = isImageMode ? "grid" : "none";
       document.getElementById("fillDirectionWrap").style.display = mode === "imageFill" ? "grid" : "none";
