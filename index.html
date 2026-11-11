@@ -639,6 +639,12 @@
           <span class="control-head"><span>外圈半径</span><span class="value" id="circleRadiusValue"></span></span>
           <input id="circleRadius" type="range" min="10" max="45" value="35" />
         </label>
+        <label id="circleInnerRadiusWrap">
+          <span class="control-head"><span>内圈半径</span><span class="value" id="circleInnerRadiusValue"></span></span>
+          <input id="circleInnerRadius" type="range" min="0" max="85" value="0" />
+          <span class="field-hint">0 为自动；其他数值按外圈半径的百分比计算。</span>
+          <span class="field-hint" id="circleCapacityHint" style="display: none;"></span>
+        </label>
         <label id="circleRingGapWrap">
           <span class="control-head"><span>圆圈间距</span><span class="value" id="circleRingGapValue"></span></span>
           <input id="circleRingGap" type="range" min="0" max="80" value="18" />
@@ -718,7 +724,7 @@
       "tearLetterSpacing", "tearLineSpacing", "tearBlurRadius", "depthXRotation", "depthYRotation", "depthZRotation",
       "seed", "canvasW", "canvasH", "imageInput", "transparentExport", "glitch", "glitchAmount", "axisScatter", "rainAxis", "imageThreshold",
       "imageLineBreaks", "imageRepeatFill", "rainOrder", "rainLineBreaks", "strictInputCount", "strictInputOrder",
-      "circleStyle", "circleSpacing", "circleRingGap", "circleSize", "circleRadius",
+      "circleStyle", "circleSpacing", "circleRingGap", "circleSize", "circleRadius", "circleInnerRadius",
       "circleSizeRandom", "circleDistanceRandom", "reflection", "reflectionSurface",
       "reflectionBlur", "reflectionWaves", "hideReflectionSurface", "radialReverse"
     ];
@@ -823,6 +829,7 @@
         ["#circleSpacingWrap .control-head span:first-child", "环形文字间距"],
         ["#circleSizeWrap .control-head span:first-child", "环形字号"],
         ["#circleRadiusWrap .control-head span:first-child", "外圈半径"],
+        ["#circleInnerRadiusWrap .control-head span:first-child", "内圈半径"],
         ["#circleRingGapWrap .control-head span:first-child", "圆圈间距"],
         ["#circleSizeRandomWrap .control-head span:first-child", "随机字号幅度"],
         ["#circleDistanceRandomWrap .control-head span:first-child", "段落距离中心随机度"],
@@ -884,6 +891,7 @@
       circleSpacing: "px",
       circleSize: "px",
       circleRadius: "%",
+      circleInnerRadius: "%",
       circleRingGap: "px",
       circleSizeRandom: "%",
       circleDistanceRandom: "%",
@@ -2360,11 +2368,11 @@
       return points;
     }
 
-    function ringLayout(glyphs, size, ringGap, letterGap, outerRadius, maxFactor) {
+    function ringLayout(glyphs, size, ringGap, letterGap, outerRadius, innerRadius, maxFactor) {
       const rings = [];
       const step = size * maxFactor * 1.45 + ringGap;
       let index = 0;
-      for (let radius = outerRadius; radius >= size * maxFactor * 0.8 && index < glyphs.length; radius -= step) {
+      for (let radius = outerRadius; radius >= Math.max(size * maxFactor * 0.8, innerRadius) && index < glyphs.length; radius -= step) {
         const circumference = Math.PI * 2 * radius;
         const ring = [];
         let used = 0;
@@ -2396,11 +2404,12 @@
         Math.min(canvas.width, canvas.height) / 2 - num("circleSize") * maxFactor / 2 - 8 * outputScale
       );
       const desiredSize = num("circleSize");
+      const innerRadius = outerRadius * num("circleInnerRadius") / 100;
       let layout;
       let size = desiredSize;
       let ringGap = num("circleRingGap");
       while (size >= 4 * outputScale) {
-        layout = ringLayout(glyphs, size, ringGap, num("circleSpacing"), outerRadius, maxFactor);
+        layout = ringLayout(glyphs, size, ringGap, num("circleSpacing"), outerRadius, innerRadius, maxFactor);
         if (layout.placed === glyphs.length) break;
         size -= outputScale;
       }
@@ -2408,10 +2417,15 @@
         ringGap = 0;
         size = desiredSize;
         while (size >= 4 * outputScale) {
-          layout = ringLayout(glyphs, size, ringGap, num("circleSpacing"), outerRadius, maxFactor);
+          layout = ringLayout(glyphs, size, ringGap, num("circleSpacing"), outerRadius, innerRadius, maxFactor);
           if (layout.placed === glyphs.length) break;
           size -= outputScale;
         }
+      }
+      if (layout.placed < glyphs.length) {
+        const hint = document.getElementById("circleCapacityHint");
+        hint.textContent = `当前设置还有 ${glyphs.length - layout.placed} 个字无法排入，请缩小内圈半径、文字间距或字号，或增大外圈半径。`;
+        hint.style.display = "block";
       }
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
@@ -2440,7 +2454,9 @@
       const outerRadius = Math.min(minDimension * num("circleRadius") / 100, minDimension / 2 - 8 * outputScale);
       const minSize = Math.min(num("minSize"), num("maxSize"));
       const maxSize = Math.max(num("minSize"), num("maxSize"));
-      const innerRadius = Math.min(outerRadius * 0.5, Math.max(minSize * 1.2, minSize * count * 0.24));
+      const automaticInnerRadius = Math.min(outerRadius * 0.5, Math.max(minSize * 1.2, minSize * count * 0.24));
+      const innerRadius = num("circleInnerRadius") === 0
+        ? automaticInnerRadius : outerRadius * num("circleInnerRadius") / 100;
       const sizeRandom = num("circleSizeRandom") / 100;
       const distanceRandom = num("circleDistanceRandom") / 100;
       lines.forEach((line, lineIndex) => {
@@ -2458,8 +2474,8 @@
         const advances = sizes.map((size, index) => size * (chars[index] === " " ? 0.42 : 1.08));
         const offset = randomBetween(rng, -1, 1) * (outerRadius - innerRadius) * 0.3 * distanceRandom;
         const startRadius = reversed
-          ? clamp(innerRadius + offset, Math.min(innerRadius, outerRadius * 0.25), outerRadius * 0.75)
-          : clamp(outerRadius + offset, innerRadius + maxSize * 0.5,
+          ? clamp(innerRadius + offset, Math.min(innerRadius, outerRadius * 0.25), outerRadius - 2 * outputScale)
+          : clamp(outerRadius + offset, Math.min(innerRadius + maxSize * 0.5, outerRadius - 2 * outputScale),
             minDimension / 2 - maxSize * 0.5 - 8 * outputScale);
         const available = reversed ? outerRadius - startRadius : startRadius - innerRadius;
         const scale = Math.min(1, available / advances.reduce((sum, advance) => sum + advance, 0));
@@ -2538,6 +2554,8 @@
       showControl("seedWrap", mode !== "imageFill");
       showControl("circleSizeWrap", mode === "circle" && controls.circleStyle.value === "rings");
       showControl("circleRadiusWrap", mode === "circle");
+      showControl("circleInnerRadiusWrap", mode === "circle");
+      document.getElementById("circleCapacityHint").style.display = "none";
       showControl("circleSpacingWrap", mode === "circle" && controls.circleStyle.value === "rings");
       showControl("circleRingGapWrap", mode === "circle" && controls.circleStyle.value === "rings");
       showControl("circleSizeRandomWrap", mode === "circle");
@@ -2584,6 +2602,10 @@
         if (!el) return;
         if (id === "count" && controls.count.value === "0") {
           el.textContent = `输入文字数(${Math.max(1, cleanText().length)})`;
+          return;
+        }
+        if (id === "circleInnerRadius" && controls.circleInnerRadius.value === "0") {
+          el.textContent = "自动";
           return;
         }
         el.textContent = `${controls[id].value}${valueLabels[id]}`;
