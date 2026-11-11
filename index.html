@@ -656,7 +656,7 @@
         <label id="circleDistanceRandomWrap">
           <span class="control-head"><span>段落距离中心随机度</span><span class="value" id="circleDistanceRandomValue"></span></span>
           <input id="circleDistanceRandom" type="range" min="0" max="200" value="0" />
-          <span class="field-hint">每段文字的内外两端分别错开，段落长度也会变化。</span>
+          <span class="field-hint">整段文字沿放射线移动，字号和字间距保持不变。</span>
         </label>
         <label id="seedWrap">
           <span class="control-head"><span>随机种子</span><span class="value" id="seedValue"></span></span>
@@ -2447,6 +2447,7 @@
 
     function drawCircleRadial(rng) {
       const lines = sourceLines();
+      const distanceRng = mulberry32(num("seed") + 0x9e3779b9);
       const reversed = controls.radialReverse.checked;
       const count = lines.length;
       const cx = canvas.width / 2;
@@ -2459,12 +2460,11 @@
       const innerRadius = num("circleInnerRadius") === 0
         ? automaticInnerRadius : outerRadius * num("circleInnerRadius") / 100;
       const sizeRandom = num("circleSizeRandom") / 100;
-      const distanceRandom = num("circleDistanceRandom") / 100;
+      const distanceRandom = num("circleDistanceRandom") / 200;
       const outerBound = Math.min(outerRadius,
         Math.max(innerRadius + 2 * outputScale, minDimension / 2 - maxSize * 0.5 - 8 * outputScale));
       const innerBound = Math.min(innerRadius, outerBound - 2 * outputScale);
       const span = outerBound - innerBound;
-      const reach = Math.min(0.45, 0.3 * distanceRandom);
       lines.forEach((line, lineIndex) => {
         const chars = lineChars(line);
         const weights = Array.from({ length: Math.max(0, chars.length - 1) },
@@ -2478,18 +2478,18 @@
             : maxSize + (minSize - maxSize) * progress;
         });
         const advances = sizes.map((size, index) => size * (chars[index] === " " ? 0.42 : 1.08));
-        let innerShift = randomBetween(rng, 0, span * reach);
-        let outerShift = randomBetween(rng, 0, span * reach);
-        if (innerShift + outerShift > span * 0.45) {
-          const ratio = span * 0.45 / (innerShift + outerShift);
-          innerShift *= ratio;
-          outerShift *= ratio;
-        }
-        const innerEdge = innerBound + innerShift;
-        const outerEdge = outerBound - outerShift;
-        const available = outerEdge - innerEdge;
-        const startRadius = reversed ? innerEdge : outerEdge;
-        const scale = Math.min(1, available / advances.reduce((sum, advance) => sum + advance, 0));
+        const totalAdvance = advances.reduce((sum, advance) => sum + advance, 0);
+        const scale = Math.min(1, span / totalAdvance);
+        const length = totalAdvance * scale;
+        const baseInner = reversed ? innerBound : outerBound - length;
+        const baseOuter = reversed ? innerBound + length : outerBound;
+        const innerGlyphSize = (reversed ? sizes[0] : sizes[sizes.length - 1]) * scale;
+        const outerGlyphSize = (reversed ? sizes[sizes.length - 1] : sizes[0]) * scale;
+        const inwardRoom = Math.max(0, baseInner - innerGlyphSize / 2 - 8 * outputScale);
+        const outwardRoom = Math.max(0,
+          minDimension / 2 - outerGlyphSize / 2 - 8 * outputScale - baseOuter);
+        const shift = randomBetween(distanceRng, -inwardRoom, outwardRoom) * distanceRandom;
+        const startRadius = (reversed ? innerBound : outerBound) + shift;
         const angle = -Math.PI / 2 + lineIndex * Math.PI * 2 / count;
         let distance = startRadius;
         chars.forEach((char, index) => {
