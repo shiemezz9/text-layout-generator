@@ -553,11 +553,11 @@
         </label>
         <label id="minSizeWrap">
           <span class="control-head"><span>最小字号</span><span class="value" id="minSizeValue"></span></span>
-          <input id="minSize" type="range" min="8" max="90" value="18" />
+          <input id="minSize" type="range" min="8" max="140" value="18" />
         </label>
         <label id="maxSizeWrap">
           <span class="control-head"><span>最大字号</span><span class="value" id="maxSizeValue"></span></span>
-          <input id="maxSize" type="range" min="12" max="180" value="76" />
+          <input id="maxSize" type="range" min="12" max="260" value="76" />
         </label>
         <label id="rotationWrap">
           <span class="control-head"><span>旋转幅度</span><span class="value" id="rotationValue"></span></span>
@@ -565,7 +565,7 @@
         </label>
         <label id="blurWrap">
           <span class="control-head"><span>随机模糊</span><span class="value" id="blurValue"></span></span>
-          <input id="blur" type="range" min="0" max="18" value="3" />
+          <input id="blur" type="range" min="0" max="32" value="3" />
         </label>
         <label id="tearLetterSpacingWrap">
           <span class="control-head"><span>泪水字间距</span><span class="value" id="tearLetterSpacingValue"></span></span>
@@ -629,38 +629,38 @@
         </label>
         <label id="circleSpacingWrap">
           <span class="control-head"><span>环形文字间距</span><span class="value" id="circleSpacingValue"></span></span>
-          <input id="circleSpacing" type="range" min="0" max="40" value="8" />
+          <input id="circleSpacing" type="range" min="0" max="80" value="8" />
         </label>
         <label id="circleSizeWrap">
           <span class="control-head"><span>环形字号</span><span class="value" id="circleSizeValue"></span></span>
-          <input id="circleSize" type="range" min="8" max="90" value="32" />
+          <input id="circleSize" type="range" min="8" max="150" value="32" />
         </label>
         <label id="circleRadiusWrap">
           <span class="control-head"><span>外圈半径</span><span class="value" id="circleRadiusValue"></span></span>
-          <input id="circleRadius" type="range" min="10" max="45" value="35" />
+          <input id="circleRadius" type="range" min="10" max="49" value="35" />
         </label>
         <label id="circleInnerRadiusWrap">
           <span class="control-head"><span>内圈半径</span><span class="value" id="circleInnerRadiusValue"></span></span>
-          <input id="circleInnerRadius" type="range" min="0" max="85" value="0" />
+          <input id="circleInnerRadius" type="range" min="0" max="90" value="0" />
           <span class="field-hint">0 为自动；其他数值按外圈半径的百分比计算。</span>
           <span class="field-hint" id="circleCapacityHint" style="display: none;"></span>
         </label>
         <label id="circleRingGapWrap">
           <span class="control-head"><span>圆圈间距</span><span class="value" id="circleRingGapValue"></span></span>
-          <input id="circleRingGap" type="range" min="0" max="80" value="18" />
+          <input id="circleRingGap" type="range" min="0" max="140" value="18" />
         </label>
         <label id="circleSizeRandomWrap">
           <span class="control-head"><span>随机字号幅度</span><span class="value" id="circleSizeRandomValue"></span></span>
-          <input id="circleSizeRandom" type="range" min="0" max="100" value="0" />
+          <input id="circleSizeRandom" type="range" min="0" max="200" value="0" />
         </label>
         <label id="circleDistanceRandomWrap">
           <span class="control-head"><span>段落距离中心随机度</span><span class="value" id="circleDistanceRandomValue"></span></span>
-          <input id="circleDistanceRandom" type="range" min="0" max="100" value="0" />
+          <input id="circleDistanceRandom" type="range" min="0" max="200" value="0" />
           <span class="field-hint">每段文字的内外两端分别错开，段落长度也会变化。</span>
         </label>
         <label id="seedWrap">
           <span class="control-head"><span>随机种子</span><span class="value" id="seedValue"></span></span>
-          <input id="seed" type="range" min="1" max="9999" value="2026" />
+          <input id="seed" type="range" min="1" max="19999" value="2026" />
         </label>
       </section>
 
@@ -2398,7 +2398,7 @@
       const maxFactor = 1 + randomAmount * 0.5;
       const glyphs = chars.map((char) => ({
         char,
-        factor: 1 + randomBetween(rng, -0.5, 0.5) * randomAmount
+        factor: Math.max(0.2, 1 + randomBetween(rng, -0.5, 0.5) * randomAmount)
       }));
       const outerRadius = Math.min(
         Math.min(canvas.width, canvas.height) * num("circleRadius") / 100,
@@ -2464,11 +2464,11 @@
         Math.max(innerRadius + 2 * outputScale, minDimension / 2 - maxSize * 0.5 - 8 * outputScale));
       const innerBound = Math.min(innerRadius, outerBound - 2 * outputScale);
       const span = outerBound - innerBound;
-      const travel = span * 0.15 * distanceRandom;
+      const reach = Math.min(0.45, 0.3 * distanceRandom);
       lines.forEach((line, lineIndex) => {
         const chars = lineChars(line);
         const weights = Array.from({ length: Math.max(0, chars.length - 1) },
-          () => 1 + randomBetween(rng, -0.9, 0.9) * sizeRandom);
+          () => Math.max(0.05, 1 + randomBetween(rng, -0.9, 0.9) * sizeRandom));
         const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
         let completedWeight = 0;
         const sizes = chars.map((_, index) => {
@@ -2478,8 +2478,15 @@
             : maxSize + (minSize - maxSize) * progress;
         });
         const advances = sizes.map((size, index) => size * (chars[index] === " " ? 0.42 : 1.08));
-        const innerEdge = innerBound + travel + randomBetween(rng, -travel, travel);
-        const outerEdge = outerBound - travel + randomBetween(rng, -travel, travel);
+        let innerShift = randomBetween(rng, 0, span * reach);
+        let outerShift = randomBetween(rng, 0, span * reach);
+        if (innerShift + outerShift > span * 0.45) {
+          const ratio = span * 0.45 / (innerShift + outerShift);
+          innerShift *= ratio;
+          outerShift *= ratio;
+        }
+        const innerEdge = innerBound + innerShift;
+        const outerEdge = outerBound - outerShift;
         const available = outerEdge - innerEdge;
         const startRadius = reversed ? innerEdge : outerEdge;
         const scale = Math.min(1, available / advances.reduce((sum, advance) => sum + advance, 0));
@@ -2646,7 +2653,7 @@
       });
 
       document.getElementById("randomize").addEventListener("click", () => {
-        controls.seed.value = String(Math.floor(Math.random() * 9998) + 1);
+        controls.seed.value = String(Math.floor(Math.random() * Number(controls.seed.max)) + 1);
         queueDraw();
       });
 
