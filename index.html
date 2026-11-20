@@ -247,6 +247,20 @@
       gap: 10px;
     }
 
+    .preset-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .preset-actions button {
+      padding: 0 6px;
+    }
+
+    #presetStatus {
+      margin: 10px 0 0;
+    }
+
     .control-head {
       align-items: center;
       display: flex;
@@ -410,6 +424,17 @@
 <body>
   <div class="app">
     <aside>
+      <section class="section preset-section">
+        <p class="section-title">保存预设</p>
+        <label>预设名称<input id="presetName" type="text" maxlength="60" placeholder="例如：蓝色环形排版" /></label>
+        <label>已保存的预设<select id="presetSelect"><option value="">选择预设</option></select></label>
+        <div class="preset-actions">
+          <button id="savePreset" type="button">保存</button>
+          <button id="loadPreset" type="button">加载</button>
+          <button id="deletePreset" type="button">删除</button>
+        </div>
+        <p class="field-hint" id="presetStatus" aria-live="polite">预设保存在当前浏览器，包含文字、参数、图片和上传字体。</p>
+      </section>
       <section class="section">
         <p class="section-title">鍐呭</p>
         <label>
@@ -471,6 +496,7 @@
         <label id="imageWrap">
           涓婁紶鍥剧墖
           <input class="file-input" id="imageInput" type="file" accept="image/*" />
+          <span class="field-hint" id="imageInputHint"></span>
         </label>
         <label id="fillDirectionWrap">
           濉厖鏂瑰悜
@@ -968,6 +994,7 @@
     };
 
     let uploadedImage = null;
+    let uploadedImageFile = null;
     let edgePoints = [];
     let maskCache = null;
     let currentExportUrl = "";
@@ -983,10 +1010,167 @@
     let customFontDataUrl = "";
     let customFontFamily = "";
     let customFontFileName = "";
+    let uploadedFontFile = null;
     let activePalette = [];
     let paragraphColors = [];
     let paragraphByFlatIndex = [];
     let glyphColorRng = null;
+    let presetDbPromise = null;
+    let imageUploadTask = Promise.resolve();
+    let fontUploadTask = Promise.resolve();
+    const presetRadioNames = ["axis", "fillDirection", "floatDirection", "imageAlign"];
+
+    function openPresetDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open("text-layout-generator-presets", 1);
+        request.onupgradeneeded = () => request.result.createObjectStore("presets", { keyPath: "name" });
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function presetRequest(mode, method, ...args) {
+      if (!presetDbPromise) presetDbPromise = openPresetDb();
+      const db = await presetDbPromise;
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("presets", mode);
+        const request = transaction.objectStore("presets")[method](...args);
+        let result;
+        request.onsuccess = () => { result = request.result; };
+        transaction.oncomplete = () => resolve(result);
+        transaction.onerror = () => reject(transaction.error);
+      });
+    }
+
+    function presetControls() {
+      return Object.fromEntries(ids.filter((id) => !["fontUpload", "imageInput"].includes(id)).map((id) => {
+        const control = controls[id];
+        return [id, control.type === "checkbox" ? control.checked : control.value];
+      }));
+    }
+
+    function presetRadios() {
+      return Object.fromEntries(presetRadioNames.map((name) => [name,
+        document.querySelector(`input[name="${name}"]:checked`).value]));
+    }
+
+    function setPresetStatus(message) {
+      document.getElementById("presetStatus").textContent = message;
+    }
+
+    async function refreshPresetList(selectedName = "") {
+      const names = await presetRequest("readonly", "getAllKeys");
+      const select = document.getElementById("presetSelect");
+      select.replaceChildren(new Option("选择预设", ""));
+      names.sort((a, b) => a.localeCompare(b, "zh-CN")).forEach((name) => {
+        select.add(new Option(name, name));
+      });
+      select.value = selectedName;
+    }
+
+    function clearUploadedFont() {
+      if (customFontFace) document.fonts.delete(customFontFace);
+      controls.fontFamily.querySelector("option[data-custom='true']")?.remove();
+      controls.fontUpload.value = "";
+      document.getElementById("fontUploadHint").textContent = "支持 TTF / OTF / WOFF / WOFF2，仅在当前浏览器本地使用。";
+      customFontFace = null;
+      customFontDataUrl = "";
+      customFontFamily = "";
+      customFontFileName = "";
+      uploadedFontFile = null;
+    }
+
+    function clearUploadedImage() {
+      uploadedImage = null;
+      uploadedImageFile = null;
+      edgePoints = [];
+      maskCache = null;
+      controls.imageInput.value = "";
+      document.getElementById("imageInputHint").textContent = "";
+    }
+
+    function loadUploadedImage(file, updateAspect = true) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          uploadedImage = img;
+          uploadedImageFile = file;
+          if (updateAspect) applyImageAspectToCanvas(img);
+          edgePoints = extractEdges(img);
+          maskCache = null;
+          document.getElementById("imageInputHint").textContent = `已载入：${file.name}`;
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("图片加载失败"));
+        };
+        img.src = url;
+      });
+    }
+
+    async function savePreset() {
+      const name = document.getElementById("presetName").value.trim();
+      if (!name) {
+        setPresetStatus("请先填写预设名称。");
+        return;
+      }
+      setPresetStatus(`正在保存「${name}」...`);
+      await Promise.all([imageUploadTask, fontUploadTask]);
+      await presetRequest("readwrite", "put", {
+        name,
+        controls: presetControls(),
+        radios: presetRadios(),
+        imageFile: uploadedImageFile,
+        fontFile: controls.fontFamily.selectedOptions[0]?.dataset.custom === "true" ? uploadedFontFile : null
+      });
+      await refreshPresetList(name);
+      setPresetStatus(`已保存「${name}」。同名预设会更新。`);
+    }
+
+    async function loadPreset() {
+      const name = document.getElementById("presetSelect").value;
+      if (!name) {
+        setPresetStatus("请先选择预设。");
+        return;
+      }
+      setPresetStatus(`正在加载「${name}」...`);
+      await Promise.all([imageUploadTask, fontUploadTask]);
+      const preset = await presetRequest("readonly", "get", name);
+      clearUploadedFont();
+      clearUploadedImage();
+      Object.entries(preset.controls).forEach(([id, value]) => {
+        if (id === "fontFamily") return;
+        const control = controls[id];
+        if (control.type === "checkbox") control.checked = value;
+        else control.value = value;
+      });
+      Object.entries(preset.radios).forEach(([group, value]) => {
+        document.querySelector(`input[name="${group}"][value="${value}"]`).checked = true;
+      });
+      if (preset.fontFile) await loadUploadedFont(preset.fontFile, true);
+      else controls.fontFamily.value = preset.controls.fontFamily;
+      if (preset.imageFile) await loadUploadedImage(preset.imageFile, false);
+      document.getElementById("presetName").value = name;
+      draw();
+      await ensureActiveFontLoaded();
+      setPresetStatus(`已加载「${name}」。`);
+    }
+
+    async function deletePreset() {
+      const name = document.getElementById("presetSelect").value;
+      if (!name) {
+        setPresetStatus("请先选择预设。");
+        return;
+      }
+      setPresetStatus(`正在删除「${name}」...`);
+      await presetRequest("readwrite", "delete", name);
+      await refreshPresetList();
+      document.getElementById("presetName").value = "";
+      setPresetStatus(`已删除「${name}」。`);
+    }
 
     function mulberry32(seed) {
       return function random() {
@@ -1228,7 +1412,7 @@
       return "woff";
     }
 
-    async function loadUploadedFont(file) {
+    async function loadUploadedFont(file, throwOnError = false) {
       if (!file) return;
       const status = document.getElementById("downloadStatus");
       const hint = document.getElementById("fontUploadHint");
@@ -1246,6 +1430,7 @@
         customFontDataUrl = dataUrl;
         customFontFamily = family;
         customFontFileName = file.name;
+        uploadedFontFile = file;
 
         let option = controls.fontFamily.querySelector("option[data-custom='true']");
         if (!option) {
@@ -1262,6 +1447,7 @@
       } catch (error) {
         if (status) status.textContent = "字体加载失败";
         if (hint) hint.textContent = "字体加载失败，请换一个 TTF / OTF / WOFF / WOFF2 文件。";
+        if (throwOnError) throw error;
       }
     }
 
@@ -2756,13 +2942,31 @@
         event.preventDefault();
       }, { passive: false });
       document.querySelectorAll("input, select, textarea").forEach((el) => {
+        if (el.closest(".preset-section")) return;
         if (el.type !== "file") el.addEventListener("input", queueDraw);
         if (el.tagName === "SELECT") el.addEventListener("change", queueDraw);
       });
+      const presetButtons = document.querySelectorAll(".preset-actions button");
+      const runPresetAction = (action) => {
+        presetButtons.forEach((button) => { button.disabled = true; });
+        action().catch((error) => {
+          console.error(error);
+          setPresetStatus(`预设操作失败：${error.message}`);
+        }).finally(() => {
+          presetButtons.forEach((button) => { button.disabled = false; });
+        });
+      };
+      document.getElementById("savePreset").addEventListener("click", () => runPresetAction(savePreset));
+      document.getElementById("loadPreset").addEventListener("click", () => runPresetAction(loadPreset));
+      document.getElementById("deletePreset").addEventListener("click", () => runPresetAction(deletePreset));
+      document.getElementById("presetSelect").addEventListener("change", (event) => {
+        document.getElementById("presetName").value = event.target.value;
+      });
+      runPresetAction(() => refreshPresetList());
       controls.fontFamily.addEventListener("change", ensureActiveFontLoaded);
       controls.fontUpload.addEventListener("change", (event) => {
         const file = event.target.files && event.target.files[0];
-        loadUploadedFont(file);
+        fontUploadTask = loadUploadedFont(file);
       });
       document.querySelectorAll("input[name='axis']").forEach((el) => el.addEventListener("change", queueDraw));
       document.querySelectorAll("input[name='fillDirection']").forEach((el) => el.addEventListener("change", queueDraw));
@@ -2772,15 +2976,9 @@
       controls.imageInput.addEventListener("change", (event) => {
         const file = event.target.files && event.target.files[0];
         if (!file) return;
-        const img = new Image();
-        img.onload = () => {
-          uploadedImage = img;
-          applyImageAspectToCanvas(img);
-          edgePoints = extractEdges(img);
-          maskCache = null;
-          queueDraw();
-        };
-        img.src = URL.createObjectURL(file);
+        imageUploadTask = loadUploadedImage(file).then(queueDraw).catch((error) => {
+          document.getElementById("imageInputHint").textContent = error.message;
+        });
       });
 
       document.getElementById("randomize").addEventListener("click", () => {
